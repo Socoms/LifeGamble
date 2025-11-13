@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>숫자야구</title>
+
+    <link rel="stylesheet" href="css/number-baseball.css">
+  </head>
+
+  <body>
+    <div class="stadium-layout">
+      <!-- 왼쪽: 야구 경기 장면 -->
+      <div class="left-panel">
+        <div class="baseball-scene">
+          <div class="field">
+            <div class="diamond">
+              <div class="base home">🏠</div>
+              <div class="base first">1</div>
+              <div class="base second">2</div>
+              <div class="base third">3</div>
+            </div>
+            <div class="pitcher">⚾</div>
+            <div class="batter">🏏</div>
+            <div class="crowd">👥👥👥</div>
+          </div>
+          <div class="scene-text">야구 경기 중...</div>
+        </div>
+      </div>
+
+      <!-- 중앙: 메인 게임 -->
+      <div class="main-container">
+        <div class="container">
+          <h1>숫자야구 게임</h1>
+          <div id="answer-display">
+            정답: <span id="answer-text"></span>
+          </div>
+          <div class="instruction">
+            4자리 숫자를 맞춰보세요! (중복 없음, 1-9 숫자만 사용)
+          </div>
+
+          <!-- 플레이어 수 설정 -->
+          <div id="player-setup">
+            <h3>플레이어 설정</h3>
+            <label for="player-count">플레이어 수: </label>
+            <select id="player-count">
+              <option value="1">1인</option>
+              <option value="2">2인</option>
+              <option value="3">3인</option>
+              <option value="4">4인</option>
+            </select>
+            <button id="start-game">게임 시작</button>
+          </div>
+
+          <!-- 플레이어 상태 표시 -->
+          <div id="player-status" style="display: none;">
+            <h3>플레이어 상태</h3>
+            <div id="players-info"></div>
+          </div>
+
+          <!-- 게임 영역 -->
+          <div id="game-area" style="display: none;">
+            <button id="reset-game">
+              🔄 게임 리셋
+            </button>
+            <form id="form">
+              <input type="text" id="input" placeholder="4자리 숫자 입력" maxlength="4">
+              <button>확인</button>
+            </form>
+            <div id="logs"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 오른쪽: 점수판 -->
+      <div class="right-panel">
+        <div class="scoreboard">
+          <div class="scoreboard-header">
+            <h3>⚾ SCOREBOARD ⚾</h3>
+          </div>
+          <div class="scoreboard-content">
+            <div class="inning-info">
+              <div class="current-inning">1회</div>
+            </div>
+            <div class="score-section">
+              <div class="team-score">
+                <div class="team-name">플레이어1</div>
+                <div class="score" id="player1-score">0</div>
+              </div>
+              <div class="vs">VS</div>
+              <div class="team-score">
+                <div class="team-name">플레이어2</div>
+                <div class="score" id="player2-score">0</div>
+              </div>
+            </div>
+            <div class="score-section" id="additional-players" style="display: none;">
+              <div class="team-score">
+                <div class="team-name">플레이어3</div>
+                <div class="score" id="player3-score">0</div>
+              </div>
+              <div class="vs">VS</div>
+              <div class="team-score">
+                <div class="team-name">플레이어4</div>
+                <div class="score" id="player4-score">0</div>
+              </div>
+            </div>
+            <div class="bs-display">
+              <div class="bs-section">
+                <div class="bs-label">B</div>
+                <div class="led-display" id="balls-display">
+                  <div class="led led-off"></div>
+                  <div class="led led-off"></div>
+                  <div class="led led-off"></div>
+                  <div class="led led-off"></div>
+                </div>
+              </div>
+              <div class="bs-section">
+                <div class="bs-label">S</div>
+                <div class="led-display" id="strikes-display">
+                  <div class="led led-off"></div>
+                  <div class="led led-off"></div>
+                  <div class="led led-off"></div>
+                </div>
+              </div>
+            </div>
+            <div class="game-stats">
+              <div class="stat-item">
+                <span class="stat-label">총 시도:</span>
+                <span class="stat-value" id="total-attempts">0</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="js/number-baseball.js"></script>
+  </body>
+</html>
+
