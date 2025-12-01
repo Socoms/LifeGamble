@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>확률과 전략 학습 게임 - Probability & Strategy Learning</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>📊 확률과 전략 학습 게임</h1>
+        <h2 class="subtitle">Probability & Strategy Learning</h2>
+        <p class="game-description">확률, 통계, 수학적 전략을 배우는 교육용 시뮬레이터입니다. 바카라와 블랙잭의 수학적 원리를 이해하고 최적의 전략을 학습하세요!</p>
+        
+        <!-- 게임 모드 선택 -->
+        <div id="modeSelection" class="mode-selection">
+            <h3>🎮 게임 모드를 선택하세요</h3>
+            <div class="mode-grid">
+                <div class="mode-card" data-mode="baccarat">
+                    <div class="mode-icon">📈</div>
+                    <h4>바카라 확률 학습</h4>
+                    <p>확률 계산과 통계 분석<br>플레이어 vs 뱅커 승률 비교</p>
+                    <span class="difficulty">학습 난이도: ⭐⭐⭐⭐⭐</span>
+                </div>
+                
+                <div class="mode-card" data-mode="blackjack">
+                    <div class="mode-icon">🧮</div>
+                    <h4>블랙잭 전략 학습</h4>
+                    <p>최적 전략과 기대값 계산<br>수학적 의사결정 연습</p>
+                    <span class="difficulty">학습 난이도: ⭐⭐⭐⭐</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 공통 게임 영역 -->
+        <div class="game-area" style="display: none;">
+            <!-- 게임 상태 패널 -->
+            <div class="status-panel">
+                <div class="status-item">
+                    <h4>📊 학습 포인트</h4>
+                    <span id="money" class="value">1000</span>
+                </div>
+                <div class="status-item">
+                    <h4>🎯 현재 게임</h4>
+                    <span id="currentGame" class="value">-</span>
+                </div>
+                <div class="status-item">
+                    <h4>📈 성공한 전략</h4>
+                    <span id="winCount" class="value">0</span>
+                </div>
+            </div>
+            
+            <!-- 게임 안내 메시지 -->
+            <div id="message" class="status-text">학습 모드를 선택하고 시작하세요!</div>
+            
+            <!-- 게임 컨트롤 -->
+            <div class="game-controls">
+                <button id="backToMenuBtn" class="btn back-btn">🏠 메뉴로 돌아가기</button>
+            </div>
+        </div>
+
+        <!-- 게임 규칙 모달 -->
+        <div id="gameRules" class="game-rules" style="display: none;">
+            <div class="rules-content">
+                <h4 id="rulesTitle">학습 가이드</h4>
+                <div id="rulesText"></div>
+                <button id="closeRules" class="btn close-rules">확인</button>
+            </div>
+        </div>
+        
+        <!-- 확률 분석 모달 -->
+        <div id="probabilityModal" class="game-rules" style="display: none;">
+            <div class="rules-content" style="max-width: 700px;">
+                <h4>📊 바카라 확률 분석</h4>
+                <div id="probabilityAnalysis" style="color: #fff; line-height: 1.8;">
+                    <h5 style="color: #ffd93d; margin-top: 15px;">이론적 승률</h5>
+                    <ul>
+                        <li><strong>플레이어:</strong> 44.62% (배당 1:1, 기대값 -1.36%)</li>
+                        <li><strong>뱅커:</strong> 45.86% (배당 0.95:1, 기대값 -1.06%)</li>
+                        <li><strong>타이:</strong> 9.52% (배당 8:1, 기대값 -14.36%)</li>
+                    </ul>
+                    <h5 style="color: #ffd93d; margin-top: 15px;">학습 포인트</h5>
+                    <ul>
+                        <li>뱅커가 가장 유리하지만 5% 수수료로 기대값이 낮아집니다</li>
+                        <li>타이는 높은 배당이지만 확률이 낮아 기대값이 매우 낮습니다</li>
+                        <li>장기적으로는 모든 선택이 마이너스 기대값입니다</li>
+                        <li>이는 카지노의 수학적 우위(하우스 엣지)를 보여줍니다</li>
+                    </ul>
+                    <h5 style="color: #ffd93d; margin-top: 15px;">통계 분석</h5>
+                    <div id="statisticsDisplay" style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; margin-top: 10px;">
+                        <div>총 게임 수: <span id="totalGames">0</span></div>
+                        <div>플레이어 승: <span id="playerWins">0</span> (<span id="playerWinRate">0%</span>)</div>
+                        <div>뱅커 승: <span id="bankerWins">0</span> (<span id="bankerWinRate">0%</span>)</div>
+                        <div>타이: <span id="tieCount">0</span> (<span id="tieRate">0%</span>)</div>
+                    </div>
+                </div>
+                <button id="closeProbability" class="btn close-rules">확인</button>
+            </div>
+        </div>
+        
+        <!-- 블랙잭 전략 모달 -->
+        <div id="strategyModal" class="game-rules" style="display: none;">
+            <div class="rules-content" style="max-width: 700px;">
+                <h4>📚 블랙잭 기본 전략</h4>
+                <div id="strategyAnalysis" style="color: #fff; line-height: 1.8;">
+                    <h5 style="color: #ffd93d; margin-top: 15px;">기본 전략 요약</h5>
+                    <ul>
+                        <li><strong>17점 이상:</strong> 항상 스탠드</li>
+                        <li><strong>12-16점:</strong> 딜러가 7 이상이면 히트, 6 이하면 스탠드</li>
+                        <li><strong>11점 이하:</strong> 항상 히트</li>
+                        <li><strong>더블다운:</strong> 9-11점에서 딜러가 약한 카드일 때</li>
+                    </ul>
+                    <h5 style="color: #ffd93d; margin-top: 15px;">수학적 원리</h5>
+                    <ul>
+                        <li>최적 전략 사용 시 기대값: 약 -0.5%</li>
+                        <li>이는 카드 게임 중 가장 낮은 하우스 엣지입니다</li>
+                        <li>카드 카운팅을 통해 더 유리한 상황을 만들 수 있습니다</li>
+                        <li>하지만 장기적으로는 여전히 마이너스 기대값입니다</li>
+                    </ul>
+                    <h5 style="color: #ffd93d; margin-top: 15px;">학습 목표</h5>
+                    <ul>
+                        <li>확률 기반 의사결정 연습</li>
+                        <li>기대값 계산 이해</li>
+                        <li>리스크 관리 학습</li>
+                    </ul>
+                </div>
+                <button id="closeStrategy" class="btn close-rules">확인</button>
+            </div>
+        </div>
+
+        <!-- 게임 결과 모달 -->
+        <div id="gameResult" class="game-result" style="display: none;">
+            <div class="result-content">
+                <h3 id="resultTitle">게임 결과</h3>
+                
+                <!-- 바카라 결과 카드 표시 -->
+                <div id="resultCards" class="result-cards" style="display: none;">
+                    <div class="result-hand">
+                        <h4>👤 플레이어</h4>
+                        <div id="resultPlayerCards" class="result-card-hand"></div>
+                        <div class="result-score">점수: <span id="resultPlayerScore">-</span></div>
+                    </div>
+                    <div class="result-hand">
+                        <h4>🏦 뱅커</h4>
+                        <div id="resultBankerCards" class="result-card-hand"></div>
+                        <div class="result-score">점수: <span id="resultBankerScore">-</span></div>
+                    </div>
+                </div>
+                
+                <p id="resultMessage"></p>
+                <button id="playAgainBtn" class="btn play-again">다시 하기</button>
+            </div>
+        </div>
+
+        <!-- 바카라 게임 영역 -->
+        <div id="baccaratGameArea" class="card-game-area" style="display: none;">
+            <!-- 바카라 헤더 -->
+            <div class="baccarat-header">
+                <div class="game-info">
+                    <h2>📈 바카라 확률 학습</h2>
+                    <div class="game-status">
+                        <span id="gamePhaseText">전략 선택 시간</span>
+                        <div id="gameTimer" class="timer">30</div>
+                    </div>
+                </div>
+                <button id="showRulesBtn" class="btn rules-btn">📖 학습 가이드</button>
+                <button id="showProbabilityBtn" class="btn rules-btn" style="margin-left: 10px;">📊 확률 분석</button>
+            </div>
+
+            <!-- 바카라 테이블 -->
+            <div class="baccarat-table">
+                <!-- 메인 게임 영역 -->
+                <div class="main-game-area">
+                    <!-- 카드 영역 -->
+                    <div class="cards-area">
+                        <div class="player-section">
+                            <div class="section-label">PLAYER</div>
+                            <div id="playerCards" class="card-slots">
+                                <div class="card-slot empty"></div>
+                                <div class="card-slot empty"></div>
+                                <div class="card-slot empty"></div>
+                            </div>
+                            <div id="playerScore" class="score-badge">-</div>
+                        </div>
+                        
+                        <div class="vs-divider">VS</div>
+                        
+                        <div class="banker-section">
+                            <div class="section-label">BANKER</div>
+                            <div id="bankerCards" class="card-slots">
+                                <div class="card-slot empty"></div>
+                                <div class="card-slot empty"></div>
+                                <div class="card-slot empty"></div>
+                            </div>
+                            <div id="bankerScore" class="score-badge">-</div>
+                        </div>
+                    </div>
+
+                    <!-- 배팅 테이블 -->
+                    <div class="betting-table">
+                        <div class="betting-areas">
+                            <div class="bet-area player-bet" data-bet="player">
+                                <div class="bet-label">플레이어</div>
+                                <div class="bet-odds">1:1</div>
+                                <div class="bet-percentage" id="playerBetPercentage">0%</div>
+                                <div style="font-size: 0.8em; color: #ccc; margin-top: 5px;">승률: 44.62%</div>
+                                <div class="bet-chips-container" id="playerChips"></div>
+                            </div>
+                            
+                            <div class="bet-area tie-bet" data-bet="tie">
+                                <div class="bet-label">타이</div>
+                                <div class="bet-odds">8:1</div>
+                                <div class="bet-percentage" id="tieBetPercentage">0%</div>
+                                <div style="font-size: 0.8em; color: #ccc; margin-top: 5px;">확률: 9.52%</div>
+                                <div class="bet-chips-container" id="tieChips"></div>
+                            </div>
+                            
+                            <div class="bet-area banker-bet" data-bet="banker">
+                                <div class="bet-label">뱅커</div>
+                                <div class="bet-odds">0.95:1</div>
+                                <div class="bet-percentage" id="bankerBetPercentage">0%</div>
+                                <div style="font-size: 0.8em; color: #ccc; margin-top: 5px;">승률: 45.86%</div>
+                                <div class="bet-chips-container" id="bankerChips"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 사이드 패널 -->
+                <div class="side-panel">
+                    <!-- 학습 포인트 선택 -->
+                    <div class="betting-chips">
+                        <h4>학습 포인트</h4>
+                        <p style="font-size: 0.85em; color: #ccc; margin-bottom: 10px;">전략 테스트용 가상 자산</p>
+                        <div class="chips-grid">
+                            <div class="chip" data-value="10">10P</div>
+                            <div class="chip" data-value="25">25P</div>
+                            <div class="chip" data-value="50">50P</div>
+                            <div class="chip" data-value="100">100P</div>
+                            <div class="chip" data-value="500">500P</div>
+                        </div>
+                    </div>
+                    
+                    <!-- 확률 정보 패널 -->
+                    <div class="probability-panel" style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; margin: 15px 0; border: 1px solid rgba(212,175,55,0.3);">
+                        <h4 style="color: #d4af37; margin-bottom: 10px; font-size: 1em;">📊 현재 확률 분석</h4>
+                        <div id="probabilityInfo" style="color: #fff; font-size: 0.9em; line-height: 1.6;">
+                            <div>플레이어 승률: <span id="playerProb">44.62%</span></div>
+                            <div>뱅커 승률: <span id="bankerProb">45.86%</span></div>
+                            <div>타이 확률: <span id="tieProb">9.52%</span></div>
+                            <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.2);">
+                                <strong style="color: #ffd700;">기대값:</strong>
+                                <div>플레이어: <span id="playerEV">-1.36%</span></div>
+                                <div>뱅커: <span id="bankerEV">-1.06%</span></div>
+                                <div>타이: <span id="tieEV">-14.36%</span></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 게임 컨트롤 -->
+                    <div class="game-controls">
+                        <button id="clearBetsBtn" class="btn clear-btn">선택 취소</button>
+                        <button id="repeatBetBtn" class="btn repeat-btn">이전 전략</button>
+                        <button id="dealCardsBtn" class="btn deal-btn" style="display: none;">시뮬레이션 시작</button>
+                    </div>
+
+                    <!-- 통계 기록 -->
+                    <div class="game-history">
+                        <div class="history-header">
+                            <span>통계 기록</span>
+                            <button id="clearHistoryBtn" class="btn-small">초기화</button>
+                        </div>
+                        <div id="historyResults" class="history-results"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 블랙잭 게임 영역 -->
+        <div id="blackjackGameArea" class="card-game-area" style="display: none;">
+            <!-- 블랙잭 헤더 -->
+            <div class="blackjack-header">
+                <div class="game-info">
+                    <h2>🧮 블랙잭 전략 학습</h2>
+                    <div class="game-status">
+                        <span id="bjGamePhaseText">전략 선택 시간</span>
+                        <div id="bjGameTimer" class="timer">30</div>
+                    </div>
+                </div>
+                <button id="showBlackjackRulesBtn" class="btn rules-btn">📖 학습 가이드</button>
+                <button id="showBlackjackStrategyBtn" class="btn rules-btn" style="margin-left: 10px;">📊 전략 분석</button>
+            </div>
+
+            <!-- 블랙잭 테이블 -->
+            <div class="blackjack-table">
+                <!-- 메인 게임 영역 -->
+                <div class="main-game-area">
+                    <!-- 딜러 영역 -->
+                    <div class="dealer-area">
+                        <div class="section-label">DEALER</div>
+                        <div id="dealerCards" class="card-slots">
+                            <div class="card-slot empty"></div>
+                            <div class="card-slot empty"></div>
+                            <div class="card-slot empty"></div>
+                            <div class="card-slot empty"></div>
+                            <div class="card-slot empty"></div>
+                        </div>
+                        <div id="dealerScore" class="score-badge">-</div>
+                    </div>
+
+                    <!-- 플레이어 영역 -->
+                    <div class="player-area">
+                        <div class="section-label">PLAYER</div>
+                        <div id="bjPlayerCards" class="card-slots">
+                            <div class="card-slot empty"></div>
+                            <div class="card-slot empty"></div>
+                            <div class="card-slot empty"></div>
+                            <div class="card-slot empty"></div>
+                            <div class="card-slot empty"></div>
+                        </div>
+                        <div id="bjPlayerScore" class="score-badge">-</div>
+                    </div>
+
+                    <!-- 배팅 영역 -->
+                    <div class="blackjack-betting-area">
+                        <div class="bet-circle">
+                            <div class="bet-label">BET</div>
+                            <div class="bet-chips-container" id="bjBetChips"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 사이드 패널 -->
+                <div class="side-panel">
+                    <!-- 학습 포인트 선택 -->
+                    <div class="betting-chips">
+                        <h4>학습 포인트</h4>
+                        <p style="font-size: 0.85em; color: #ccc; margin-bottom: 10px;">전략 테스트용 가상 자산</p>
+                        <div class="chips-grid">
+                            <div class="bj-chip" data-value="10">10P</div>
+                            <div class="bj-chip" data-value="25">25P</div>
+                            <div class="bj-chip" data-value="50">50P</div>
+                            <div class="bj-chip" data-value="100">100P</div>
+                            <div class="bj-chip" data-value="500">500P</div>
+                        </div>
+                    </div>
+                    
+                    <!-- 전략 가이드 패널 -->
+                    <div class="strategy-panel" style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; margin: 15px 0; border: 1px solid rgba(212,175,55,0.3);">
+                        <h4 style="color: #d4af37; margin-bottom: 10px; font-size: 1em;">📚 기본 전략 가이드</h4>
+                        <div id="strategyInfo" style="color: #fff; font-size: 0.85em; line-height: 1.6;">
+                            <div><strong>히트:</strong> 17점 미만</div>
+                            <div><strong>스탠드:</strong> 17점 이상</div>
+                            <div><strong>더블다운:</strong> 9-11점 (특정 상황)</div>
+                            <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.2);">
+                                <strong style="color: #ffd700;">기대값:</strong> 최적 전략 시 약 -0.5%
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 게임 컨트롤 -->
+                    <div class="blackjack-controls">
+                        <button id="bjDealBtn" class="btn deal-btn">🎴 시뮬레이션 시작</button>
+                        <button id="bjHitBtn" class="btn hit-btn" style="display: none;">히트 (카드 받기)</button>
+                        <button id="bjStandBtn" class="btn stand-btn" style="display: none;">스탠드 (멈추기)</button>
+                        <button id="bjDoubleBtn" class="btn double-btn" style="display: none;">더블다운 (2배)</button>
+                    </div>
+
+                    <!-- 통계 기록 -->
+                    <div class="blackjack-history">
+                        <div class="history-header">
+                            <span>통계 기록</span>
+                            <button id="bjClearHistoryBtn" class="btn-small">초기화</button>
+                        </div>
+                        <div id="bjHistoryResults" class="history-results"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/game.js"></script>
+</body>
+</html>

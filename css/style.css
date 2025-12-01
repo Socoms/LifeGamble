@@ -1,0 +1,1625 @@
+/* Life Gambling Game Styles */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Arial', sans-serif;
+    margin: 0;
+    padding: 20px;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    min-height: 100vh;
+    color: #fff;
+    overflow-x: hidden;
+    box-sizing: border-box;
+}
+
+.container {
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+    background: linear-gradient(145deg, rgba(30, 30, 60, 0.9), rgba(20, 20, 40, 0.9));
+    padding: 20px;
+    border-radius: 20px;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(15px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    min-height: calc(100vh - 40px);
+    box-sizing: border-box;
+}
+
+h1 {
+    text-align: center;
+    color: #ff6b6b;
+    margin-bottom: 5px;
+    font-size: 2.2em;
+    text-shadow: 0 0 20px rgba(255, 107, 107, 0.5);
+    font-weight: bold;
+}
+
+.subtitle {
+    text-align: center;
+    color: #ffd93d;
+    margin-bottom: 10px;
+    font-size: 1.2em;
+    text-shadow: 0 0 15px rgba(255, 217, 61, 0.3);
+}
+
+.game-description {
+    text-align: center;
+    color: #ccc;
+    margin-bottom: 30px;
+    font-size: 1.1em;
+    font-style: italic;
+}
+
+.game-area {
+    text-align: center;
+    padding: 20px;
+}
+
+.btn {
+    color: white;
+    border: none;
+    padding: 15px 30px;
+    margin: 5px;
+    border-radius: 25px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.start-btn {
+    background: linear-gradient(45deg, #28a745, #20c997);
+}
+
+.bet-btn {
+    background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+    padding: 12px 20px;
+    font-size: 14px;
+}
+
+.all-in {
+    background: linear-gradient(45deg, #dc3545, #c82333);
+    animation: pulse 2s infinite;
+}
+
+.next-round {
+    background: linear-gradient(45deg, #ffd93d, #ffb700);
+    color: #333;
+}
+
+.reset-btn {
+    background: linear-gradient(45deg, #6c757d, #495057);
+}
+
+@keyframes pulse {
+    0% { box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3); }
+    50% { box-shadow: 0 4px 25px rgba(220, 53, 69, 0.6); }
+    100% { box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3); }
+}
+
+/* 게임 모드 선택 스타일 */
+.mode-selection {
+    margin: 30px 0;
+    text-align: center;
+}
+
+.mode-selection h3 {
+    color: #ffd93d;
+    margin-bottom: 20px;
+    font-size: 1.5em;
+}
+
+.mode-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 30px;
+    margin: 20px 0;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.mode-card {
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 15px;
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+}
+
+.mode-card:hover {
+    transform: translateY(-5px);
+    border-color: #ffd93d;
+    box-shadow: 0 10px 30px rgba(255, 217, 61, 0.3);
+}
+
+.mode-card.selected {
+    border-color: #ff6b6b;
+    background: linear-gradient(145deg, rgba(255, 107, 107, 0.2), rgba(255, 107, 107, 0.1));
+    box-shadow: 0 0 20px rgba(255, 107, 107, 0.4);
+}
+
+.mode-icon {
+    font-size: 3em;
+    margin-bottom: 10px;
+}
+
+.mode-card h4 {
+    color: #fff;
+    margin: 10px 0;
+    font-size: 1.2em;
+}
+
+.mode-card p {
+    color: #ccc;
+    font-size: 0.9em;
+    margin: 10px 0;
+    line-height: 1.4;
+}
+
+.difficulty {
+    display: inline-block;
+    background: rgba(255, 217, 61, 0.2);
+    color: #ffd93d;
+    padding: 5px 10px;
+    border-radius: 15px;
+    font-size: 0.8em;
+    margin-top: 10px;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+
+.btn:active {
+    transform: translateY(0);
+}
+
+.status-panel {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+    margin: 20px 0;
+}
+
+.status-item {
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+    padding: 15px;
+    border-radius: 10px;
+    text-align: center;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+}
+
+.status-item.debt {
+    border-color: #ff6b6b;
+    box-shadow: 0 0 15px rgba(255, 107, 107, 0.3);
+}
+
+.status-item h4 {
+    margin: 0 0 10px 0;
+    font-size: 0.9em;
+    color: #ccc;
+}
+
+.status-item .value {
+    font-size: 1.5em;
+    font-weight: bold;
+    color: #fff;
+}
+
+.betting-area {
+    margin: 20px 0;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 15px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.betting-area h3 {
+    color: #ffd93d;
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+.bet-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 15px;
+}
+
+.status-text {
+    font-size: 18px;
+    margin: 20px 0;
+    font-weight: bold;
+    text-align: center;
+    padding: 15px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 10px;
+    border-left: 4px solid #ffd93d;
+}
+
+.status-text.success {
+    border-left-color: #28a745;
+    background: rgba(40, 167, 69, 0.1);
+}
+
+.status-text.danger {
+    border-left-color: #dc3545;
+    background: rgba(220, 53, 69, 0.1);
+}
+
+.status-text.warning {
+    border-left-color: #ffc107;
+    background: rgba(255, 193, 7, 0.1);
+}
+
+.hidden {
+    display: none;
+}
+
+/* 게임 규칙 모달 */
+.game-rules {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.rules-content {
+    background: linear-gradient(145deg, rgba(30, 30, 60, 0.95), rgba(20, 20, 40, 0.95));
+    padding: 30px;
+    border-radius: 15px;
+    max-width: 500px;
+    max-height: 70vh;
+    overflow-y: auto;
+    border: 2px solid rgba(255, 217, 61, 0.5);
+}
+
+.rules-content h4 {
+    color: #ffd93d;
+    margin-bottom: 15px;
+    text-align: center;
+    font-size: 1.5em;
+}
+
+.rules-content p {
+    color: #fff;
+    line-height: 1.6;
+    margin-bottom: 10px;
+}
+
+.close-rules {
+    background: linear-gradient(45deg, #28a745, #20c997);
+    margin-top: 20px;
+    width: 100%;
+}
+
+/* 바카라 게임 스타일 */
+.card-game-area {
+    margin: 10px 0;
+    padding: 0;
+    background: linear-gradient(135deg, #0f4c3a 0%, #1a5f4a 50%, #0f4c3a 100%);
+    border-radius: 15px;
+    border: 2px solid #d4af37;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+    overflow: hidden;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* 바카라 헤더 */
+.baccarat-header {
+    background: linear-gradient(90deg, #1a1a2e, #16213e);
+    padding: 10px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #d4af37;
+}
+
+.game-info h2 {
+    color: #d4af37;
+    margin: 0;
+    font-size: 1.4em;
+    text-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
+}
+
+.game-status {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-top: 5px;
+}
+
+.game-status span {
+    color: #fff;
+    font-size: 1.1em;
+}
+
+.timer {
+    background: #28a745;
+    color: white;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-weight: bold;
+    min-width: 40px;
+    text-align: center;
+    transition: all 0.3s ease;
+    font-size: 1.1em;
+}
+
+.timer.warning {
+    background: #ffc107;
+    color: #333;
+}
+
+.timer.danger {
+    background: #dc3545;
+    animation: pulse-timer 1s infinite;
+}
+
+@keyframes pulse-timer {
+    0% { 
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+    }
+    70% { 
+        transform: scale(1.1);
+        box-shadow: 0 0 0 10px rgba(220, 53, 69, 0);
+    }
+    100% { 
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
+    }
+}
+
+.rules-btn {
+    background: linear-gradient(45deg, #17a2b8, #138496);
+    padding: 8px 15px;
+    font-size: 0.9em;
+    border-radius: 8px;
+}
+
+/* 바카라 테이블 */
+.baccarat-table {
+    display: grid;
+    grid-template-columns: 1fr 280px;
+    gap: 15px;
+    padding: 15px;
+    background: radial-gradient(ellipse at center, #1a5f4a 0%, #0f4c3a 70%);
+    min-height: 450px;
+    border-radius: 15px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* 메인 게임 영역 */
+.main-game-area {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* 카드 영역 */
+.cards-area {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 20px;
+    align-items: center;
+    padding: 15px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 12px;
+    border: 2px solid rgba(212, 175, 55, 0.3);
+    min-height: 160px;
+}
+
+.player-section, .banker-section {
+    text-align: center;
+}
+
+.section-label {
+    font-size: 1.5em;
+    font-weight: bold;
+    color: #d4af37;
+    margin-bottom: 20px;
+    text-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
+}
+
+.card-slots {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.card-slot {
+    width: 70px;
+    height: 98px;
+    border: 2px dashed rgba(255, 255, 255, 0.3);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.05);
+    transition: all 0.3s ease;
+}
+
+.card-slot.empty::after {
+    content: "?";
+    color: rgba(255, 255, 255, 0.3);
+    font-size: 2em;
+}
+
+.card-slot img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 6px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.vs-divider {
+    font-size: 2em;
+    font-weight: bold;
+    color: #d4af37;
+    text-shadow: 0 0 15px rgba(212, 175, 55, 0.8);
+    background: radial-gradient(circle, rgba(212, 175, 55, 0.2) 0%, transparent 70%);
+    padding: 20px;
+    border-radius: 50%;
+}
+
+.score-badge {
+    display: inline-block;
+    background: linear-gradient(45deg, #d4af37, #f4d03f);
+    color: #000;
+    padding: 10px 20px;
+    border-radius: 25px;
+    font-size: 1.5em;
+    font-weight: bold;
+    min-width: 50px;
+    box-shadow: 0 4px 15px rgba(212, 175, 55, 0.4);
+}
+
+/* 배팅 테이블 */
+.betting-table {
+    flex: 1;
+}
+
+.betting-areas {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 15px;
+    height: 100%;
+}
+
+.bet-area {
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+    border: 3px solid transparent;
+    border-radius: 12px;
+    padding: 15px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    min-height: 140px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.bet-area:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(212, 175, 55, 0.3);
+}
+
+.player-bet {
+    border-color: #4dabf7;
+    background: linear-gradient(145deg, rgba(77, 171, 247, 0.2), rgba(77, 171, 247, 0.1));
+}
+
+.banker-bet {
+    border-color: #ff6b6b;
+    background: linear-gradient(145deg, rgba(255, 107, 107, 0.2), rgba(255, 107, 107, 0.1));
+}
+
+.tie-bet {
+    border-color: #51cf66;
+    background: linear-gradient(145deg, rgba(81, 207, 102, 0.2), rgba(81, 207, 102, 0.1));
+}
+
+.bet-area.selected {
+    border-width: 4px;
+    box-shadow: 0 0 20px rgba(212, 175, 55, 0.6);
+    transform: scale(1.05);
+}
+
+.bet-label {
+    font-size: 1.3em;
+    font-weight: bold;
+    color: #fff;
+    margin-bottom: 8px;
+}
+
+.bet-payout {
+    font-size: 1.1em;
+    color: #d4af37;
+    margin-bottom: 8px;
+}
+
+.bet-percentage {
+    font-size: 0.9em;
+    color: #ccc;
+    margin-bottom: 10px;
+}
+
+.bet-chips-container {
+    position: absolute;
+    top: 65%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 120px;
+    height: 120px;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.bet-chips {
+    min-height: 30px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+/* 사이드 패널 */
+.side-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 15px;
+    border-radius: 12px;
+    border: 2px solid rgba(212, 175, 55, 0.3);
+    height: fit-content;
+}
+
+/* 칩 스타일 */
+.game-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.chip-selector {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.chip-label {
+    color: #d4af37;
+    font-weight: bold;
+    text-align: center;
+}
+
+.chips {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+}
+
+.chip {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.8em;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 2px solid;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
+}
+
+.chip[data-value="10"] {
+    background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+    border-color: #c44569;
+    color: white;
+}
+
+.chip[data-value="25"] {
+    background: linear-gradient(45deg, #4dabf7, #339af0);
+    border-color: #1c7ed6;
+    color: white;
+}
+
+.chip[data-value="50"] {
+    background: linear-gradient(45deg, #51cf66, #40c057);
+    border-color: #37b24d;
+    color: white;
+}
+
+.chip[data-value="100"] {
+    background: linear-gradient(45deg, #ffd93d, #fab005);
+    border-color: #f59f00;
+    color: #333;
+}
+
+.chip[data-value="500"] {
+    background: linear-gradient(45deg, #9775fa, #7950f2);
+    border-color: #6741d9;
+    color: white;
+}
+
+.chip:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.4);
+}
+
+.chip.selected,
+.bj-chip.selected {
+    transform: scale(1.2);
+    box-shadow: 0 0 15px rgba(212, 175, 55, 0.8);
+}
+
+.bj-chip {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(45deg, #6c757d, #495057);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1em;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 2px solid #d4af37;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+}
+
+.bj-chip:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 12px rgba(212, 175, 55, 0.4);
+}
+
+.bj-chip[data-value="10"] {
+    background: linear-gradient(45deg, #ffa94d, #fd7e14);
+}
+
+.bj-chip[data-value="25"] {
+    background: linear-gradient(45deg, #74c0fc, #339af0);
+}
+
+.bj-chip[data-value="50"] {
+    background: linear-gradient(45deg, #8ce99a, #51cf66);
+}
+
+.bj-chip[data-value="100"] {
+    background: linear-gradient(45deg, #ffd43b, #fab005);
+}
+
+.bj-chip[data-value="500"] {
+    background: linear-gradient(45deg, #da77f2, #9775fa);
+}
+
+.action-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.action-buttons .btn {
+    width: 100%;
+    padding: 10px;
+    font-size: 0.9em;
+}
+
+.clear-btn {
+    background: linear-gradient(45deg, #6c757d, #495057);
+}
+
+.repeat-btn {
+    background: linear-gradient(45deg, #17a2b8, #138496);
+}
+
+.deal-btn {
+    background: linear-gradient(45deg, #28a745, #20c997);
+    animation: pulse 2s infinite;
+}
+
+/* 배팅 칩 스택 애니메이션 */
+.bet-chip-stack {
+    transition: all 0.3s ease;
+    animation: chipDrop 0.5s ease-out;
+}
+
+@keyframes chipDrop {
+    0% {
+        transform: translateY(-20px) rotate(0deg);
+        opacity: 0;
+    }
+    50% {
+        transform: translateY(5px) rotate(5deg);
+        opacity: 0.8;
+    }
+    100% {
+        transform: translateY(0px);
+        opacity: 1;
+    }
+}
+
+.bet-chip-stack:hover {
+    transform: scale(1.3) rotate(0deg) !important;
+    z-index: 1000 !important;
+    box-shadow: 0 5px 15px rgba(212, 175, 55, 0.6) !important;
+}
+
+.total-amount-label {
+    animation: labelFadeIn 0.5s ease-out 0.3s both;
+}
+
+@keyframes labelFadeIn {
+    0% {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* 블랙잭 배팅 영역 */
+.blackjack-betting-area {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 20px 0;
+}
+
+.bet-circle {
+    width: 120px;
+    height: 120px;
+    border: 3px solid #d4af37;
+    border-radius: 50%;
+    background: linear-gradient(145deg, rgba(212, 175, 55, 0.2), rgba(212, 175, 55, 0.1));
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.bet-circle:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 20px rgba(212, 175, 55, 0.4);
+}
+
+.bet-circle .bet-label {
+    position: absolute;
+    top: 10px;
+    font-size: 0.9em;
+    font-weight: bold;
+    color: #d4af37;
+}
+
+/* 게임 히스토리 */
+.game-history {
+    padding: 15px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    flex: 1;
+}
+
+.history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.history-header span {
+    color: #d4af37;
+    font-weight: bold;
+    font-size: 1.1em;
+}
+
+.btn-small {
+    background: linear-gradient(45deg, #6c757d, #495057);
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-size: 0.8em;
+    cursor: pointer;
+}
+
+.history-results {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+
+.history-item {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.8em;
+    border: 2px solid;
+}
+
+.history-item.player {
+    background: #4dabf7;
+    border-color: #1c7ed6;
+    color: white;
+}
+
+.history-item.banker {
+    background: #ff6b6b;
+    border-color: #c92a2a;
+    color: white;
+}
+
+.history-item.tie {
+    background: #51cf66;
+    border-color: #37b24d;
+    color: white;
+}
+
+/* 블랙잭 전용 스타일 */
+.blackjack-header {
+    background: linear-gradient(90deg, #8b0000, #a52a2a);
+    padding: 10px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #ffd700;
+}
+
+.blackjack-table {
+    display: grid;
+    grid-template-columns: 1fr 280px;
+    gap: 15px;
+    padding: 15px;
+    background: radial-gradient(ellipse at center, #8b0000 0%, #660000 70%);
+    min-height: 450px;
+    border-radius: 15px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* 딜러 영역 */
+.dealer-area-bj {
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 12px;
+    padding: 15px;
+    border: 2px solid rgba(255, 215, 0, 0.3);
+    margin-bottom: 20px;
+}
+
+.dealer-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.dealer-label {
+    font-size: 1.3em;
+    font-weight: bold;
+    color: #ffd700;
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+}
+
+/* 플레이어 영역 */
+.player-area-bj {
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 12px;
+    padding: 15px;
+    border: 2px solid rgba(255, 215, 0, 0.3);
+    margin-bottom: 20px;
+}
+
+.player-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.player-label {
+    font-size: 1.3em;
+    font-weight: bold;
+    color: #ffd700;
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+}
+
+/* 카드 핸드 */
+.card-hand-bj {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.card-slot-bj {
+    width: 70px;
+    height: 98px;
+    border: 2px dashed rgba(255, 255, 255, 0.3);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.05);
+    transition: all 0.3s ease;
+}
+
+.card-slot-bj.empty::after {
+    content: "?";
+    color: rgba(255, 255, 255, 0.3);
+    font-size: 1.5em;
+}
+
+.card-slot-bj img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 4px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.card-slot-bj.hidden {
+    background: linear-gradient(45deg, #1a1a2e, #16213e);
+    border: 2px solid #ffd700;
+}
+
+.card-slot-bj.hidden::after {
+    content: "🂠";
+    color: #ffd700;
+    font-size: 2em;
+}
+
+/* 점수 표시 */
+.score-display-bj {
+    background: linear-gradient(45deg, #ffd700, #ffed4e);
+    color: #000;
+    padding: 8px 15px;
+    border-radius: 20px;
+    font-size: 1.3em;
+    font-weight: bold;
+    min-width: 40px;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(255, 215, 0, 0.4);
+}
+
+.score-display-bj.bust {
+    background: linear-gradient(45deg, #dc3545, #c82333);
+    color: white;
+}
+
+.score-display-bj.blackjack {
+    background: linear-gradient(45deg, #28a745, #20c997);
+    color: white;
+    animation: blackjack-glow 2s infinite alternate;
+}
+
+@keyframes blackjack-glow {
+    from {
+        box-shadow: 0 0 10px rgba(40, 167, 69, 0.5);
+    }
+    to {
+        box-shadow: 0 0 20px rgba(40, 167, 69, 0.8);
+    }
+}
+
+/* 배팅 및 액션 영역 */
+.betting-action-area {
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 12px;
+    padding: 15px;
+    border: 2px solid rgba(255, 215, 0, 0.3);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.bet-display {
+    text-align: center;
+    padding: 10px;
+    border-radius: 8px;
+    border: 2px dashed rgba(255, 215, 0, 0.5);
+    background: rgba(255, 215, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.bet-display:hover {
+    background: rgba(255, 215, 0, 0.2);
+    border-color: rgba(255, 215, 0, 0.8);
+}
+
+.bet-label {
+    color: #ffd700;
+    font-size: 1.1em;
+    margin-bottom: 8px;
+}
+
+.bet-amount {
+    background: linear-gradient(45deg, #17a2b8, #138496);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 25px;
+    font-size: 1.4em;
+    font-weight: bold;
+    box-shadow: 0 4px 12px rgba(23, 162, 184, 0.4);
+}
+
+/* 액션 버튼들 */
+.action-buttons-bj {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.action-btn {
+    padding: 12px 20px;
+    font-size: 1em;
+    font-weight: bold;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    min-width: 80px;
+}
+
+.deal-btn {
+    background: linear-gradient(45deg, #28a745, #20c997);
+    animation: pulse-deal 2s infinite;
+}
+
+.hit-btn {
+    background: linear-gradient(45deg, #17a2b8, #138496);
+}
+
+.stand-btn {
+    background: linear-gradient(45deg, #ffc107, #e0a800);
+    color: #333;
+}
+
+.double-btn {
+    background: linear-gradient(45deg, #fd7e14, #e8590c);
+}
+
+.split-btn {
+    background: linear-gradient(45deg, #6f42c1, #5a32a3);
+}
+
+@keyframes pulse-deal {
+    0% { 
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7);
+    }
+    70% { 
+        transform: scale(1.05);
+        box-shadow: 0 0 0 10px rgba(40, 167, 69, 0);
+    }
+    100% { 
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(40, 167, 69, 0);
+    }
+}
+
+/* 게임 통계 */
+.game-stats {
+    padding: 15px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+    border: 1px solid rgba(255, 215, 0, 0.3);
+}
+
+.stats-header {
+    color: #ffd700;
+    font-weight: bold;
+    font-size: 1.1em;
+    margin-bottom: 15px;
+    text-align: center;
+    border-bottom: 1px solid rgba(255, 215, 0, 0.3);
+    padding-bottom: 8px;
+}
+
+.stats-content {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.stat-item {
+    display: flex;
+    justify-content: space-between;
+    color: #fff;
+    font-size: 0.9em;
+}
+
+.stat-item span:last-child {
+    font-weight: bold;
+    color: #ffd700;
+}
+
+.new-game-btn {
+    background: linear-gradient(45deg, #6c757d, #495057);
+}
+
+.card-table {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    margin: 20px 0;
+}
+
+.dealer-area, .player-area {
+    text-align: center;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.dealer-area h4, .player-area h4 {
+    color: #ffd93d;
+    margin-bottom: 15px;
+    font-size: 1.2em;
+}
+
+.card-hand {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin: 15px 0;
+    min-height: 120px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.card-img {
+    width: 80px;
+    height: auto;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    transition: transform 0.3s ease;
+}
+
+.card-img:hover {
+    transform: translateY(-5px);
+}
+
+.card-back {
+    width: 80px;
+    height: 112px;
+    background: linear-gradient(45deg, #1a1a2e, #16213e);
+    border: 2px solid #ffd93d;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2em;
+    color: #ffd93d;
+}
+
+.score-display {
+    font-size: 1.5em;
+    font-weight: bold;
+    color: #fff;
+    margin-top: 10px;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 8px;
+    display: inline-block;
+    min-width: 60px;
+}
+
+.card-controls, .baccarat-controls {
+    text-align: center;
+    margin: 20px 0;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+}
+
+.card-controls h4, .baccarat-controls h4 {
+    color: #ffd93d;
+    margin-bottom: 15px;
+}
+
+.card-btn, .baccarat-btn {
+    background: linear-gradient(45deg, #28a745, #20c997);
+    margin: 5px;
+    padding: 12px 20px;
+    font-size: 14px;
+}
+
+.baccarat-bets {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.baccarat-btn {
+    background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+    min-width: 120px;
+}
+
+.baccarat-btn:hover {
+    background: linear-gradient(45deg, #ee5a24, #ff6b6b);
+}
+
+/* 새로운 배팅 시스템 */
+.betting-section {
+    text-align: center;
+    margin: 20px 0;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.betting-section h4 {
+    color: #ffd93d;
+    margin-bottom: 15px;
+}
+
+.bet-amount-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.bet-amount {
+    background: linear-gradient(45deg, #6c757d, #495057);
+    padding: 10px 20px;
+    min-width: 80px;
+    transition: all 0.3s ease;
+}
+
+.bet-amount:hover {
+    background: linear-gradient(45deg, #495057, #6c757d);
+    transform: translateY(-2px);
+}
+
+.bet-amount.selected {
+    background: linear-gradient(45deg, #ffd93d, #ffb700);
+    color: #333;
+    box-shadow: 0 0 15px rgba(255, 217, 61, 0.5);
+}
+
+/* 바카라 배팅 옵션 */
+.baccarat-betting {
+    text-align: center;
+    margin: 20px 0;
+    padding: 20px;
+    background: rgba(255, 107, 107, 0.1);
+    border-radius: 10px;
+    border: 1px solid rgba(255, 107, 107, 0.3);
+}
+
+.baccarat-betting h4 {
+    color: #ff6b6b;
+    margin-bottom: 15px;
+}
+
+.baccarat-options {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.baccarat-option {
+    background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+    padding: 15px 20px;
+    min-width: 120px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.baccarat-option .bet-title {
+    font-weight: bold;
+    font-size: 1.1em;
+    margin-bottom: 5px;
+}
+
+.baccarat-option .bet-payout {
+    font-size: 0.9em;
+    opacity: 0.9;
+}
+
+.baccarat-option:hover {
+    background: linear-gradient(45deg, #ee5a24, #ff6b6b);
+    transform: translateY(-3px);
+}
+
+/* 블랙잭 컨트롤 */
+.blackjack-controls {
+    text-align: center;
+    margin: 20px 0;
+    padding: 20px;
+    background: rgba(40, 167, 69, 0.1);
+    border-radius: 10px;
+    border: 1px solid rgba(40, 167, 69, 0.3);
+}
+
+.action-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.deal-btn {
+    background: linear-gradient(45deg, #28a745, #20c997);
+    padding: 15px 30px;
+    font-size: 1.1em;
+    font-weight: bold;
+}
+
+.hit-btn, .stand-btn, .double-btn {
+    background: linear-gradient(45deg, #17a2b8, #138496);
+    padding: 12px 20px;
+    min-width: 100px;
+}
+
+.hit-btn:hover, .stand-btn:hover, .double-btn:hover {
+    background: linear-gradient(45deg, #138496, #17a2b8);
+}
+
+/* 게임 결과 */
+.game-result {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.result-content {
+    background: linear-gradient(145deg, rgba(30, 30, 60, 0.95), rgba(20, 20, 40, 0.95));
+    padding: 40px;
+    border-radius: 15px;
+    text-align: center;
+    border: 2px solid rgba(255, 217, 61, 0.5);
+    max-width: 600px;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+/* 결과 카드 표시 */
+.result-cards {
+    margin: 20px 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.result-hand {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 15px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.result-hand h4 {
+    color: #ffd93d;
+    margin-bottom: 10px;
+    font-size: 1.1em;
+}
+
+.result-card-hand {
+    display: flex;
+    justify-content: center;
+    gap: 5px;
+    margin: 10px 0;
+    flex-wrap: wrap;
+}
+
+.result-card-hand .card-img {
+    width: 50px;
+    height: auto;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.result-score {
+    font-size: 1.2em;
+    font-weight: bold;
+    color: #fff;
+    margin-top: 10px;
+    padding: 8px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 5px;
+    display: inline-block;
+}
+
+.winning-result {
+    border: 2px solid #28a745;
+    box-shadow: 0 0 15px rgba(40, 167, 69, 0.5);
+}
+
+.losing-result {
+    border: 2px solid #dc3545;
+    box-shadow: 0 0 15px rgba(220, 53, 69, 0.3);
+}
+
+.result-content h3 {
+    color: #ffd93d;
+    margin-bottom: 20px;
+    font-size: 2em;
+}
+
+.result-content p {
+    color: #fff;
+    font-size: 1.2em;
+    margin-bottom: 25px;
+    line-height: 1.5;
+    white-space: pre-line; /* 줄바꿈 문자(\n)를 실제 줄바꿈으로 표시 */
+}
+
+.play-again {
+    background: linear-gradient(45deg, #28a745, #20c997);
+    padding: 15px 30px;
+    font-size: 1.1em;
+    width: 100%;
+}
+
+/* 게임 컨트롤 */
+.game-controls {
+    text-align: center;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.back-btn {
+    background: linear-gradient(45deg, #6c757d, #495057);
+    padding: 12px 25px;
+}
+
+.card-animation {
+    animation: cardDeal 0.5s ease-out;
+}
+
+@keyframes cardDeal {
+    from {
+        transform: translateY(-50px) rotateY(90deg);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0) rotateY(0deg);
+        opacity: 1;
+    }
+}
+
+.winning-hand {
+    animation: winGlow 1s ease-in-out infinite alternate;
+}
+
+@keyframes winGlow {
+    from {
+        box-shadow: 0 0 10px rgba(40, 167, 69, 0.5);
+    }
+    to {
+        box-shadow: 0 0 20px rgba(40, 167, 69, 0.8);
+    }
+}
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+    .container {
+        margin: 10px;
+        padding: 20px;
+    }
+    
+    h1 {
+        font-size: 2em;
+    }
+    
+    .btn {
+        padding: 12px 24px;
+        font-size: 14px;
+    }
+    
+    .baccarat-table {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+    
+    .side-panel {
+        order: -1;
+    }
+    
+    .chips {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    
+    .chip {
+        width: 40px;
+        height: 40px;
+        font-size: 0.8em;
+    }
+    
+    .cards-area {
+        grid-template-columns: 1fr;
+        gap: 20px;
+        text-align: center;
+    }
+    
+    .vs-divider {
+        order: 2;
+    }
+    
+    .player-section {
+        order: 1;
+    }
+    
+    .banker-section {
+        order: 3;
+    }
+    
+    .betting-areas {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+    
+    .card-slot {
+        width: 60px;
+        height: 84px;
+    }
+    
+    .result-cards {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+    
+    .result-card-hand .card-img {
+        width: 40px;
+    }
+    
+    .result-content {
+        padding: 25px;
+        max-width: 90vw;
+    }
+}
