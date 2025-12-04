@@ -7,6 +7,7 @@ class RoyalCasino {
         this.winCount = 0;
         this.selectedMode = null;
         this.selectedChip = 10;
+        this.userGameData = null; // 유저 게임 데이터
         
         // 바카라 게임 상태
         this.deckId = null;
@@ -18,6 +19,37 @@ class RoyalCasino {
         this.gameHistory = [];
         this.timer = null;
         this.timeLeft = 30;
+        
+        // 다이스 게임 상태
+        this.diceBetAmount = 10;
+        this.diceSelectedNumber = 50;
+        this.diceBetType = null; // 'smaller' or 'larger'
+        this.diceHistory = [];
+        this.diceRecentResults = [];
+        this.diceGamePhase = 'betting';
+        
+        // 하이로우 게임 상태
+        this.hiloCurrentCard = null;
+        this.hiloDrawnCards = [];
+        this.hiloBets = { higher: 0, lower: 0 };
+        this.hiloBetAmount = 0;
+        this.hiloSelectedChip = 10;
+        this.hiloGamePhase = 'waiting'; // waiting, betting, result
+        this.hiloHistory = [];
+        this.hiloRemainingCards = 52;
+        
+        // 사운드 설정
+        this.bgMusicEnabled = false;
+        this.soundEffectsEnabled = true;
+        this.bgMusic = document.getElementById('bgMusic');
+        this.winSound = document.getElementById('winSound');
+        this.loseSound = document.getElementById('loseSound');
+        this.cardDealSound = document.getElementById('cardDealSound');
+        this.diceRollSound = document.getElementById('diceRollSound');
+        
+        // 다이스 API 설정
+        this.useDiceAPI = true; // Random.org API 사용 여부
+        this.diceAPIKey = null; // API 키 (필요시)
         
         this.init();
     }
@@ -55,10 +87,72 @@ class RoyalCasino {
         document.getElementById('closeProbability')?.addEventListener('click', () => this.hideProbabilityModal());
         document.getElementById('closeStrategy')?.addEventListener('click', () => this.hideStrategyModal());
         document.getElementById('playAgainBtn')?.addEventListener('click', () => this.newRound());
-        document.getElementById('backToMenuBtn')?.addEventListener('click', () => this.backToMenu());
+        document.getElementById('backToMenuBtn')?.addEventListener('click', () => {
+            console.log('backToMenuBtn 클릭됨');
+            this.backToMenu();
+        });
+        const backToMenuBtnDice = document.getElementById('backToMenuBtnDice');
+        if (backToMenuBtnDice) {
+            backToMenuBtnDice.addEventListener('click', () => {
+                console.log('backToMenuBtnDice 클릭됨');
+                this.backToMenu();
+            });
+        } else {
+            console.warn('backToMenuBtnDice 버튼을 찾을 수 없습니다');
+        }
+        const backToMenuBtnHilo = document.getElementById('backToMenuBtnHilo');
+        if (backToMenuBtnHilo) {
+            backToMenuBtnHilo.addEventListener('click', () => {
+                console.log('backToMenuBtnHilo 클릭됨');
+                this.backToMenu();
+            });
+        } else {
+            console.warn('backToMenuBtnHilo 버튼을 찾을 수 없습니다');
+        }
+        
+        // 다이스 게임 버튼들
+        document.getElementById('showDiceRulesBtn')?.addEventListener('click', () => this.showDiceRules());
+        document.getElementById('showDiceProbabilityBtn')?.addEventListener('click', () => this.showDiceProbability());
+        document.getElementById('closeDiceRules')?.addEventListener('click', () => this.hideDiceRules());
+        document.getElementById('clearDiceBetsBtn')?.addEventListener('click', () => this.clearDiceBets());
+        document.getElementById('repeatDiceBetBtn')?.addEventListener('click', () => this.repeatDiceBet());
+        document.getElementById('rollDiceBtn')?.addEventListener('click', () => this.rollDice());
+        document.getElementById('clearDiceHistoryBtn')?.addEventListener('click', () => this.clearDiceHistory());
+        
+        // 하이로우 게임 버튼들
+        document.getElementById('showHiloRulesBtn')?.addEventListener('click', () => this.showHiloRules());
+        document.getElementById('showHiloProbabilityBtn')?.addEventListener('click', () => this.showHiloProbability());
+        document.getElementById('closeHiloRules')?.addEventListener('click', () => this.hideHiloRules());
+        document.getElementById('startHiloBtn')?.addEventListener('click', () => this.startHilo());
+        document.getElementById('drawNextCardBtn')?.addEventListener('click', () => this.drawNextHiloCard());
+        document.getElementById('changeCardBtn')?.addEventListener('click', () => this.changeHiloCard());
+        document.getElementById('clearHiloBetsBtn')?.addEventListener('click', () => this.clearHiloBets());
+        document.getElementById('hiloHalfBtn')?.addEventListener('click', () => this.hiloHalfBet());
+        document.getElementById('hiloDoubleBtn')?.addEventListener('click', () => this.hiloDoubleBet());
+        document.getElementById('clearHiloHistoryBtn')?.addEventListener('click', () => this.clearHiloHistory());
+        
+        // 사운드 컨트롤
+        document.getElementById('bgMusicToggle')?.addEventListener('click', () => this.toggleBgMusic());
+        document.getElementById('soundEffectsToggle')?.addEventListener('click', () => this.toggleSoundEffects());
     }
 
     selectGameMode(mode) {
+        // 게임 모드 전환 전 현재 포인트 저장
+        if (window.authManager && window.authManager.currentUser && this.selectedMode) {
+            const currentMode = this.selectedMode;
+            if (currentMode === 'baccarat') {
+                this.saveGameData('baccarat', { win: false, loss: false, tie: false });
+            } else if (currentMode === 'blackjack') {
+                this.saveGameData('blackjack', { win: false, loss: false, push: false, blackjack: false });
+            } else if (currentMode === 'dice') {
+                this.saveGameData('dice', { win: false, loss: false });
+            } else if (currentMode === 'hilo') {
+                this.saveGameData('hilo', { win: false, loss: false, tie: false });
+            } else if (currentMode === 'holdem') {
+                // 홀덤은 멀티플레이어이므로 별도 처리
+            }
+        }
+        
         this.selectedMode = mode;
         
         // 모든 게임 영역 숨기기
@@ -69,14 +163,56 @@ class RoyalCasino {
         
         if (mode === 'baccarat') {
             this.setupBaccarat();
-            document.getElementById('baccaratGameArea').style.display = 'block';
+            const baccaratArea = document.getElementById('baccaratGameArea');
+            if (baccaratArea) {
+                baccaratArea.style.display = 'block';
+                baccaratArea.style.visibility = 'visible';
+                baccaratArea.style.opacity = '1';
+                console.log('바카라 게임 영역 표시:', baccaratArea.style.display);
+            }
+            this.initializeDeck();
         } else if (mode === 'blackjack') {
             this.setupBlackjack();
-            document.getElementById('blackjackGameArea').style.display = 'block';
+            const blackjackArea = document.getElementById('blackjackGameArea');
+            if (blackjackArea) {
+                blackjackArea.style.display = 'block';
+                blackjackArea.style.visibility = 'visible';
+                blackjackArea.style.opacity = '1';
+                console.log('블랙잭 게임 영역 표시:', blackjackArea.style.display);
+            }
+            this.initializeDeck();
+        } else if (mode === 'dice') {
+            this.setupDice();
+            const diceArea = document.getElementById('diceGameArea');
+            if (diceArea) {
+                diceArea.style.display = 'block';
+                diceArea.style.visibility = 'visible';
+                diceArea.style.opacity = '1';
+                console.log('다이스 게임 영역 표시:', diceArea.style.display);
+            }
+        } else if (mode === 'hilo') {
+            this.setupHilo();
+            const hiloArea = document.getElementById('hiloGameArea');
+            if (hiloArea) {
+                hiloArea.style.display = 'block';
+                hiloArea.style.visibility = 'visible';
+                hiloArea.style.opacity = '1';
+                console.log('하이로우 게임 영역 표시:', hiloArea.style.display);
+            }
+            this.initializeDeck();
+        } else if (mode === 'holdem') {
+            this.setupHoldem();
+            const holdemArea = document.getElementById('holdemGameArea');
+            if (holdemArea) {
+                holdemArea.style.display = 'block';
+                holdemArea.style.visibility = 'visible';
+                holdemArea.style.opacity = '1';
+                console.log('홀덤 게임 영역 표시:', holdemArea.style.display);
+            }
         }
         
+        // 포인트는 유지되므로 업데이트만
         this.updateDisplay();
-        this.initializeDeck();
     }
 
     hideAllGameAreas() {
@@ -85,6 +221,9 @@ class RoyalCasino {
             'game-area',
             'baccaratGameArea', 
             'blackjackGameArea',
+            'diceGameArea',
+            'hiloGameArea',
+            'holdemGameArea',
             'gameRules',
             'gameResult'
         ];
@@ -99,7 +238,10 @@ class RoyalCasino {
 
     setupBaccarat() {
         console.log('바카라 설정 시작');
-        document.getElementById('currentGame').textContent = '바카라 확률 학습';
+        const currentGameEl = document.getElementById('currentGame');
+        if (currentGameEl) {
+            currentGameEl.textContent = '바카라 확률 학습';
+        }
         
         // 바카라 전용 변수 초기화
         this.gamePhase = 'betting';
@@ -111,8 +253,14 @@ class RoyalCasino {
         this.updateProbabilityDisplay();
         this.gamePhase = 'betting';
         this.enableBettingControls();
-        document.getElementById('gamePhaseText').textContent = '전략 선택 시간';
-        document.getElementById('gameTimer').textContent = '-';
+        const gamePhaseTextEl = document.getElementById('gamePhaseText');
+        if (gamePhaseTextEl) {
+            gamePhaseTextEl.textContent = '전략 선택 시간';
+        }
+        const gameTimerEl = document.getElementById('gameTimer');
+        if (gameTimerEl) {
+            gameTimerEl.textContent = '-';
+        }
         console.log('바카라 설정 완료');
     }
 
@@ -146,7 +294,10 @@ class RoyalCasino {
 
     setupBlackjack() {
         console.log('블랙잭 설정 시작');
-        document.getElementById('currentGame').textContent = '블랙잭 전략 학습';
+        const currentGameEl = document.getElementById('currentGame');
+        if (currentGameEl) {
+            currentGameEl.textContent = '블랙잭 전략 학습';
+        }
         
         // 블랙잭 전용 변수 초기화
         this.bjStats = { wins: 0, losses: 0, pushes: 0, blackjacks: 0 };
@@ -160,8 +311,14 @@ class RoyalCasino {
         console.log('블랙잭 이벤트 리스너 설정 중...');
         this.setupBlackjackEventListeners();
         this.bjGamePhase = 'betting';
-        document.getElementById('bjGamePhaseText').textContent = '전략 선택 시간';
-        document.getElementById('bjGameTimer').textContent = '-';
+        const bjGamePhaseTextEl = document.getElementById('bjGamePhaseText');
+        if (bjGamePhaseTextEl) {
+            bjGamePhaseTextEl.textContent = '전략 선택 시간';
+        }
+        const bjGameTimerEl = document.getElementById('bjGameTimer');
+        if (bjGameTimerEl) {
+            bjGameTimerEl.textContent = '-';
+        }
         this.showMessage('📊 학습 포인트를 선택하고 전략을 테스트하세요!');
         console.log('블랙잭 설정 완료');
     }
@@ -397,17 +554,20 @@ class RoyalCasino {
         cardImg.src = card.image;
         cardImg.alt = `${card.value} of ${card.suit}`;
         cardImg.style.opacity = '0';
-        cardImg.style.transform = 'scale(0.8)';
-        cardImg.style.transition = 'all 0.5s ease';
+        cardImg.style.transform = 'translateY(-50px) rotateY(180deg) scale(0.8)';
+        cardImg.style.transition = 'all 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55)';
         
         slot.appendChild(cardImg);
         
+        // 카드 딜링 사운드
+        this.playSound('card');
+        
         setTimeout(() => {
             cardImg.style.opacity = '1';
-            cardImg.style.transform = 'scale(1)';
+            cardImg.style.transform = 'translateY(0) rotateY(0deg) scale(1)';
         }, 100);
         
-        return new Promise(resolve => setTimeout(resolve, 500));
+        return new Promise(resolve => setTimeout(resolve, 600));
     }
 
     async dealHiddenCardToSlot(slot) {
@@ -668,6 +828,13 @@ class RoyalCasino {
                 break;
         }
         
+        // 효과음 재생
+        if (winAmount > this.bjCurrentBet) {
+            this.playSound('win');
+        } else if (winAmount < this.bjCurrentBet) {
+            this.playSound('lose');
+        }
+        
         this.money += winAmount;
         this.updateDisplay();
         this.updateBlackjackStats();
@@ -689,6 +856,14 @@ class RoyalCasino {
         setTimeout(() => {
             this.showBlackjackResultModal(result, message, winAmount);
         }, 1500);
+        
+        // 유저 데이터 저장
+        this.saveGameData('blackjack', {
+            win: result === 'win' || result === 'blackjack' || result === 'dealer_bust',
+            loss: result === 'lose' || result === 'bust',
+            push: result === 'push',
+            blackjack: result === 'blackjack'
+        });
     }
 
     showBlackjackResultModal(result, message, winAmount) {
@@ -1489,18 +1664,21 @@ class RoyalCasino {
         cardImg.src = card.image;
         cardImg.alt = `${card.value} of ${card.suit}`;
         cardImg.style.opacity = '0';
-        cardImg.style.transform = 'scale(0.8)';
-        cardImg.style.transition = 'all 0.5s ease';
+        cardImg.style.transform = 'translateY(-50px) rotateY(180deg) scale(0.8)';
+        cardImg.style.transition = 'all 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55)';
         
         slot.appendChild(cardImg);
+        
+        // 카드 딜링 사운드
+        this.playSound('card');
         
         // 애니메이션
         setTimeout(() => {
             cardImg.style.opacity = '1';
-            cardImg.style.transform = 'scale(1)';
+            cardImg.style.transform = 'translateY(0) rotateY(0deg) scale(1)';
         }, 100);
         
-        return new Promise(resolve => setTimeout(resolve, 500));
+        return new Promise(resolve => setTimeout(resolve, 600));
     }
 
     async applyThirdCardRules(playerScore, bankerScore) {
@@ -1647,6 +1825,57 @@ class RoyalCasino {
         
         this.updateDisplay();
         this.showGameResult('📈 바카라 시뮬레이션 결과', message, isWin);
+        
+        // 효과음 재생
+        if (isWin && winAmount > totalBet) {
+            this.playSound('win');
+        } else if (!isWin && totalBet > 0) {
+            this.playSound('lose');
+        }
+        
+        // 유저 데이터 저장
+        this.saveGameData('baccarat', {
+            win: isWin && winAmount > totalBet,
+            loss: !isWin && totalBet > 0,
+            tie: winner === 'tie'
+        });
+    }
+    
+    loadUserGameData(userData) {
+        if (!userData) return;
+        
+        this.userGameData = userData;
+        
+        // currentPoints를 우선적으로 사용 (모든 게임에서 공통)
+        if (userData.currentPoints !== undefined) {
+            this.money = userData.currentPoints;
+        } else if (userData.gameStats) {
+            // currentPoints가 없으면 게임별 포인트 사용
+            if (userData.gameStats.baccarat) {
+                this.money = userData.gameStats.baccarat.totalPoints || 1000;
+            } else if (userData.gameStats.blackjack) {
+                this.money = userData.gameStats.blackjack.totalPoints || 1000;
+            } else if (userData.gameStats.dice) {
+                this.money = userData.gameStats.dice.totalPoints || 1000;
+            } else if (userData.gameStats.hilo) {
+                this.money = userData.gameStats.hilo.totalPoints || 1000;
+            } else {
+                this.money = 1000;
+            }
+        } else {
+            this.money = 1000;
+        }
+        
+        this.updateDisplay();
+    }
+    
+    async saveGameData(gameMode, stats) {
+        if (!window.authManager || !window.authManager.currentUser) {
+            // 로그인하지 않은 경우 로컬에만 저장
+            return;
+        }
+        
+        await window.authManager.saveGameData(gameMode, stats, this.money);
     }
 
     updateGameHistory() {
@@ -1918,14 +2147,18 @@ class RoyalCasino {
         document.getElementById('gameRules').style.display = 'none';
     }
 
-    backToMenu() {
+    async backToMenu() {
+        console.log('backToMenu 호출됨, 현재 모드:', this.selectedMode);
         // 타이머 정리
         if (this.timer) {
             clearInterval(this.timer);
             this.timer = null;
         }
         
-        // 게임 상태 완전 초기화
+        // 메뉴로 돌아갈 때는 게임을 플레이한 것이 아니므로 통계를 저장하지 않음
+        // 포인트만 저장하려면 별도로 처리할 수 있지만, 현재는 저장하지 않음
+        
+        // 게임 상태 완전 초기화 (포인트는 유지)
         this.selectedMode = null;
         this.playerCards = [];
         this.bankerCards = [];
@@ -1940,6 +2173,20 @@ class RoyalCasino {
             this.bjGamePhase = 'betting';
         }
         
+        // 다이스 상태 초기화
+        this.diceBetType = null;
+        this.diceGamePhase = 'betting';
+        
+        // 하이로우 상태 초기화
+        this.hiloBets = { higher: 0, lower: 0 };
+        this.hiloBetAmount = 0;
+        this.hiloGamePhase = 'waiting';
+        
+        // 홀덤 게임 떠나기
+        if (window.holdemGame) {
+            window.holdemGame.leaveTable();
+        }
+        
         // 모든 게임 영역 숨기기
         this.hideAllGameAreas();
         
@@ -1951,12 +2198,34 @@ class RoyalCasino {
             card.classList.remove('selected');
         });
         
+        // 포인트는 유지되므로 업데이트만
+        this.updateDisplay();
         this.showMessage('🎮 게임을 선택하세요!');
     }
 
     updateDisplay() {
-        document.getElementById('money').textContent = this.money;
-        document.getElementById('winCount').textContent = this.winCount;
+        // 유저 정보 영역 통계 업데이트
+        const userMoneyEl = document.getElementById('userMoney');
+        const userWinCountEl = document.getElementById('userWinCount');
+        const userCurrentGameEl = document.getElementById('userCurrentGame');
+        
+        if (userMoneyEl) userMoneyEl.textContent = this.money;
+        if (userWinCountEl) userWinCountEl.textContent = this.winCount;
+        
+        // 현재 게임 모드 표시
+        if (userCurrentGameEl) {
+            let gameName = '-';
+            if (this.selectedMode === 'baccarat') {
+                gameName = '바카라';
+            } else if (this.selectedMode === 'blackjack') {
+                gameName = '블랙잭';
+            } else if (this.selectedMode === 'dice') {
+                gameName = '다이스';
+            } else if (this.selectedMode === 'hilo') {
+                gameName = '하이로우';
+            }
+            userCurrentGameEl.textContent = gameName;
+        }
     }
 
     showMessage(message, type = 'info') {
@@ -2003,11 +2272,941 @@ class RoyalCasino {
             }
         }
     }
+
+    // ========== 다이스 게임 메서드 ==========
+    setupDice() {
+        console.log('다이스 게임 설정 시작');
+        const currentGameEl = document.getElementById('currentGame');
+        if (currentGameEl) {
+            currentGameEl.textContent = '다이스 확률 학습';
+        }
+        
+        this.diceGamePhase = 'betting';
+        this.diceBetAmount = 10;
+        this.diceSelectedNumber = 50;
+        this.diceBetType = null;
+        this.diceAutoBet = false;
+        this.diceAutoBetRemaining = 0;
+        
+        this.setupDiceEventListeners();
+        this.updateDiceDisplay();
+        this.updateDiceProbabilities();
+        this.showMessage('🎲 숫자를 선택하고 더 작은/더 큰을 선택하세요!');
+        const diceGamePhaseTextEl = document.getElementById('diceGamePhaseText');
+        if (diceGamePhaseTextEl) {
+            diceGamePhaseTextEl.textContent = '배팅 시간';
+        }
+    }
+
+    setupDiceEventListeners() {
+        // 메뉴로 돌아가기 버튼 이벤트 리스너 설정 (게임 영역이 표시될 때마다 다시 설정)
+        const backToMenuBtnDice = document.getElementById('backToMenuBtnDice');
+        if (backToMenuBtnDice) {
+            // 기존 이벤트 리스너 제거를 위해 클론 후 교체
+            const newBtn = backToMenuBtnDice.cloneNode(true);
+            backToMenuBtnDice.replaceWith(newBtn);
+            // 새 버튼에 이벤트 리스너 추가
+            document.getElementById('backToMenuBtnDice').addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('backToMenuBtnDice 클릭됨 (setupDiceEventListeners)');
+                this.backToMenu();
+            });
+        }
+        
+        // 배팅 금액 입력
+        document.getElementById('diceBetAmount')?.addEventListener('input', (e) => {
+            const value = parseInt(e.target.value) || 1;
+            this.diceBetAmount = Math.max(1, Math.min(this.money, value));
+            this.updateDiceDisplay();
+            this.updateDiceProbabilities();
+        });
+        
+        document.getElementById('diceBetHalf')?.addEventListener('click', () => {
+            this.diceBetAmount = Math.floor(this.diceBetAmount / 2) || 1;
+            this.updateDiceDisplay();
+            this.updateDiceProbabilities();
+        });
+        
+        document.getElementById('diceBetDouble')?.addEventListener('click', () => {
+            this.diceBetAmount = Math.min(this.money, this.diceBetAmount * 2);
+            this.updateDiceDisplay();
+            this.updateDiceProbabilities();
+        });
+        
+        // 숫자 슬라이더
+        document.getElementById('diceNumberSlider')?.addEventListener('input', (e) => {
+            this.diceSelectedNumber = parseInt(e.target.value);
+            document.getElementById('selectedDiceNumber').textContent = this.diceSelectedNumber;
+            document.getElementById('targetDiceNumber').textContent = this.diceSelectedNumber;
+            this.updateDiceProbabilities();
+        });
+        
+        // 배팅 옵션 선택 (배팅하지 않고 선택만)
+        document.getElementById('diceBetSmaller')?.addEventListener('click', () => {
+            this.diceBetType = 'smaller';
+            // 배팅 버튼 선택 표시
+            document.querySelectorAll('.dice-bet-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            document.getElementById('diceBetSmaller')?.classList.add('selected');
+            this.updateDiceProbabilities();
+        });
+        
+        document.getElementById('diceBetLarger')?.addEventListener('click', () => {
+            this.diceBetType = 'larger';
+            // 배팅 버튼 선택 표시
+            document.querySelectorAll('.dice-bet-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            document.getElementById('diceBetLarger')?.classList.add('selected');
+            this.updateDiceProbabilities();
+        });
+        
+        // 게임 시작 버튼
+        document.getElementById('diceStartGameBtn')?.addEventListener('click', () => {
+            if (!this.diceBetType) {
+                this.showMessage('더 작은 또는 더 큰을 선택해주세요!', 'warning');
+                return;
+            }
+            this.rollDice();
+        });
+        
+        // 빠른 칩 선택
+        document.querySelectorAll('.dice-chip')?.forEach(chip => {
+            chip.addEventListener('click', () => {
+                const value = parseInt(chip.dataset.value);
+                if (value <= this.money) {
+                    this.diceBetAmount = value;
+                    this.updateDiceDisplay();
+                    this.updateDiceProbabilities();
+                }
+            });
+        });
+    }
+
+
+    async rollDice() {
+        if (this.diceGamePhase !== 'betting' || !this.diceBetType) {
+            this.showMessage('더 작은 또는 더 큰을 선택해주세요!', 'warning');
+            return;
+        }
+
+        if (this.money < this.diceBetAmount) {
+            this.showMessage('💰 학습 포인트가 부족합니다!', 'danger');
+            return;
+        }
+
+        this.diceGamePhase = 'rolling';
+        this.money -= this.diceBetAmount;
+        this.updateDisplay();
+        
+        // 게임 시작 버튼 비활성화
+        const startBtn = document.getElementById('diceStartGameBtn');
+        if (startBtn) startBtn.disabled = true;
+        
+        // 주사위 굴리기 사운드
+        this.playSound('dice');
+        
+        // 먼저 랜덤 숫자 생성 (애니메이션 전에)
+        const rolledNumber = await this.rollDiceNumber();
+        
+        // 주사위 굴리기 애니메이션 (생성된 숫자로 최종 표시)
+        await this.animateDiceRollNew(rolledNumber);
+        
+        // 결과 처리
+        this.processDiceResultNew(rolledNumber);
+    }
+
+    async rollDiceNumber() {
+        // Random.org API 사용 (0-100 범위)
+        try {
+            const response = await fetch('https://www.random.org/integers/?num=1&min=0&max=100&col=1&base=10&format=plain&rnd=new');
+            if (response.ok) {
+                const text = await response.text();
+                return parseInt(text.trim());
+            }
+        } catch (error) {
+            console.log('Random.org API 실패, Math.random() 사용:', error);
+        }
+        // Fallback to Math.random()
+        return Math.floor(Math.random() * 101); // 0-100
+    }
+
+    async animateDiceRollNew(finalNumber) {
+        const rolledNumberEl = document.getElementById('rolledDiceNumber');
+        let count = 0;
+        const animationDuration = 1500; // 애니메이션 총 시간 (ms)
+        const intervalTime = 50; // 업데이트 간격 (ms)
+        const totalFrames = Math.floor(animationDuration / intervalTime);
+        
+        const interval = setInterval(() => {
+            // 애니메이션 중에는 랜덤 숫자 표시
+            rolledNumberEl.textContent = String(Math.floor(Math.random() * 101)).padStart(2, '0');
+            count++;
+            
+            if (count >= totalFrames) {
+                clearInterval(interval);
+                // 애니메이션 종료 시 최종 숫자로 고정
+                rolledNumberEl.textContent = String(finalNumber).padStart(2, '0');
+            }
+        }, intervalTime);
+        
+        // 애니메이션 완료 대기
+        return new Promise(resolve => setTimeout(resolve, animationDuration));
+    }
+
+    processDiceResultNew(rolledNumber) {
+        // 애니메이션에서 이미 숫자가 표시되었으므로 여기서는 다시 설정하지 않음
+        const rolledNumberEl = document.getElementById('rolledDiceNumber');
+        // 숫자가 이미 표시되어 있는지 확인하고, 없으면 표시
+        if (rolledNumberEl.textContent === '00' || rolledNumberEl.textContent === '') {
+            rolledNumberEl.textContent = String(rolledNumber).padStart(2, '0');
+        }
+        
+        let isWin = false;
+        let winnings = 0;
+        
+        if (this.diceBetType === 'smaller') {
+            isWin = rolledNumber < this.diceSelectedNumber;
+        } else if (this.diceBetType === 'larger') {
+            isWin = rolledNumber > this.diceSelectedNumber;
+        }
+        
+        if (isWin) {
+            const multiplier = this.calculateDiceMultiplier();
+            winnings = Math.floor(this.diceBetAmount * multiplier);
+            this.money += this.diceBetAmount + winnings;
+            this.winCount++;
+            this.playSound('win');
+            this.showMessage(`🎉 승리! +${winnings}P 획득!`, 'success');
+        } else {
+            this.playSound('lose');
+            this.showMessage(`💀 패배... ${this.diceBetAmount}P 손실`, 'danger');
+        }
+        
+        // 히스토리 기록
+        this.diceHistory.push({
+            target: this.diceSelectedNumber,
+            rolled: rolledNumber,
+            betType: this.diceBetType,
+            betAmount: this.diceBetAmount,
+            winnings: winnings,
+            isWin: isWin
+        });
+        
+        // 최근 결과 업데이트
+        this.diceRecentResults.unshift({
+            number: rolledNumber,
+            isWin: isWin
+        });
+        if (this.diceRecentResults.length > 20) {
+            this.diceRecentResults.pop();
+        }
+        
+        this.updateDiceDisplay();
+        this.updateDiceHistory();
+        this.updateRecentResults();
+        
+        // 유저 데이터 저장
+        this.saveGameData('dice', {
+            win: isWin,
+            loss: !isWin,
+            betAmount: this.diceBetAmount,
+            winnings: winnings
+        });
+        
+        // 다음 라운드 준비
+        setTimeout(() => {
+            this.diceGamePhase = 'betting';
+            this.diceBetType = null;
+            document.querySelectorAll('.dice-bet-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            rolledNumberEl.textContent = '00';
+            
+            // 게임 시작 버튼 활성화
+            const startBtn = document.getElementById('diceStartGameBtn');
+            if (startBtn) startBtn.disabled = false;
+        }, 2000);
+    }
+
+    calculateDiceMultiplier() {
+        // 확률 기반 배당률 계산 (하우스 엣지 1% 포함)
+        const probability = this.diceBetType === 'smaller' 
+            ? this.diceSelectedNumber / 100
+            : (100 - this.diceSelectedNumber) / 100;
+        
+        if (probability === 0) return 1;
+        return parseFloat(((1 / probability) * 0.99).toFixed(2)); // 하우스 엣지 1%, 소수점 2자리
+    }
+
+    updateRecentResults() {
+        const container = document.getElementById('diceRecentResults');
+        if (!container) return;
+        
+        container.innerHTML = '';
+        this.diceRecentResults.slice(0, 10).forEach(result => {
+            const item = document.createElement('div');
+            item.className = `recent-result-item ${result.isWin ? 'win' : 'lose'}`;
+            item.textContent = String(result.number).padStart(2, '0');
+            container.appendChild(item);
+        });
+    }
+
+    updateDiceDisplay() {
+        // 배팅 금액 표시
+        const betAmountInput = document.getElementById('diceBetAmount');
+        if (betAmountInput) {
+            betAmountInput.value = this.diceBetAmount;
+        }
+        
+        // 칩 선택 표시
+        document.querySelectorAll('.dice-chip').forEach(chip => {
+            chip.classList.toggle('selected', parseInt(chip.dataset.value) === this.diceBetAmount);
+        });
+        
+        // 학습 포인트 실시간 업데이트
+        this.updateDisplay();
+    }
+
+    updateDiceProbabilities() {
+        if (!this.diceBetType) {
+            // 기본 확률 계산 (더 작은/더 큰)
+            const smallerProb = (this.diceSelectedNumber / 100 * 100).toFixed(2);
+            const largerProb = ((100 - this.diceSelectedNumber) / 100 * 100).toFixed(2);
+            
+            document.getElementById('smallerProb').textContent = `${smallerProb}%`;
+            document.getElementById('largerProb').textContent = `${largerProb}%`;
+            
+            // 기본 승수 계산
+            const smallerMultiplier = parseFloat(((1 / (parseFloat(smallerProb) / 100)) * 0.99).toFixed(2));
+            const largerMultiplier = parseFloat(((1 / (parseFloat(largerProb) / 100)) * 0.99).toFixed(2));
+            const avgMultiplier = ((smallerMultiplier + largerMultiplier) / 2).toFixed(2);
+            
+            document.getElementById('diceMultiplier').textContent = `x${avgMultiplier}`;
+            document.getElementById('diceWinProbability').textContent = '50.00%';
+            document.getElementById('dicePossibleWin').textContent = '0P';
+        } else {
+            // 선택한 배팅 타입에 따른 확률
+            const probability = this.diceBetType === 'smaller' 
+                ? this.diceSelectedNumber / 100
+                : (100 - this.diceSelectedNumber) / 100;
+            
+            const probPercent = (probability * 100).toFixed(2);
+            const multiplier = this.calculateDiceMultiplier();
+            const possibleWin = Math.floor(this.diceBetAmount * multiplier);
+            
+            document.getElementById('diceMultiplier').textContent = `x${multiplier.toFixed(2)}`;
+            document.getElementById('diceWinProbability').textContent = `${probPercent}%`;
+            document.getElementById('dicePossibleWin').textContent = `${possibleWin}P`;
+            
+            // 확률 패널 업데이트
+            document.getElementById('smallerProb').textContent = `${(this.diceSelectedNumber / 100 * 100).toFixed(2)}%`;
+            document.getElementById('largerProb').textContent = `${((100 - this.diceSelectedNumber) / 100 * 100).toFixed(2)}%`;
+        }
+        
+        // 기대값 계산
+        if (this.diceBetType) {
+            const probability = this.diceBetType === 'smaller' 
+                ? this.diceSelectedNumber / 100
+                : (100 - this.diceSelectedNumber) / 100;
+            const multiplier = this.calculateDiceMultiplier();
+            const ev = ((probability * multiplier - 1) * 100).toFixed(2);
+            document.getElementById('diceEV').textContent = `${ev}%`;
+        }
+    }
+
+    updateDiceHistory() {
+        const historyContainer = document.getElementById('diceHistoryResults');
+        if (!historyContainer) return;
+        
+        historyContainer.innerHTML = '';
+        
+        const recentHistory = this.diceHistory.slice(-10).reverse();
+        recentHistory.forEach(entry => {
+            const historyItem = document.createElement('div');
+            historyItem.className = `dice-history-item ${entry.isWin ? 'win' : 'lose'}`;
+            
+            const resultIcon = entry.isWin ? '✓' : '✗';
+            const winningsText = entry.winnings > 0 ? `+${entry.winnings}P` : '0P';
+            
+            historyItem.innerHTML = `
+                <div class="history-icon">${resultIcon}</div>
+                <div class="history-numbers">
+                    <span class="history-target">${entry.target}</span>
+                    <span class="history-operator">${entry.betType === 'smaller' ? '<' : '>'}</span>
+                    <span class="history-rolled">${entry.rolled}</span>
+                </div>
+                <div class="history-winnings">${winningsText}</div>
+            `;
+            historyContainer.appendChild(historyItem);
+        });
+    }
+
+    clearDiceHistory() {
+        this.diceHistory = [];
+        this.updateDiceHistory();
+    }
+
+    showDiceRules() {
+        document.getElementById('diceRulesModal').style.display = 'flex';
+    }
+
+    hideDiceRules() {
+        document.getElementById('diceRulesModal').style.display = 'none';
+    }
+
+    showDiceProbability() {
+        // 확률 분석 모달 표시 (추후 구현)
+        this.showMessage('📊 다이스 확률 분석 기능은 준비 중입니다!', 'info');
+    }
+
+    // ========== 홀덤 게임 메서드 ==========
+    setupHoldem() {
+        console.log('홀덤 게임 설정 시작');
+        const currentGameEl = document.getElementById('currentGame');
+        if (currentGameEl) {
+            currentGameEl.textContent = '텍사스 홀덤';
+        }
+        
+        // 홀덤 게임은 별도 클래스에서 관리
+        if (window.holdemGame) {
+            // 이미 초기화됨
+        } else {
+            console.log('홀덤 게임 인스턴스가 없습니다.');
+        }
+        
+        this.showMessage('🎴 테이블에 참가하여 게임을 시작하세요!');
+    }
+
+    // ========== 하이로우 게임 메서드 ==========
+    setupHilo() {
+        console.log('하이로우 게임 설정 시작');
+        const currentGameEl = document.getElementById('currentGame');
+        if (currentGameEl) {
+            currentGameEl.textContent = '하이로우 카드 학습';
+        }
+        
+        this.hiloGamePhase = 'waiting';
+        this.hiloSelectedChip = 10;
+        this.hiloBets = { higher: 0, lower: 0 };
+        this.hiloBetAmount = 0;
+        this.hiloCurrentCard = null;
+        this.hiloDrawnCards = [];
+        this.hiloRemainingCards = 52;
+        
+        this.setupHiloEventListeners();
+        this.updateHiloDisplay();
+        this.showMessage('🃏 게임 시작 버튼을 눌러주세요!');
+        const hiloGamePhaseTextEl = document.getElementById('hiloGamePhaseText');
+        if (hiloGamePhaseTextEl) {
+            hiloGamePhaseTextEl.textContent = '대기 중';
+        }
+    }
+
+    setupHiloEventListeners() {
+        // 메뉴로 돌아가기 버튼 이벤트 리스너 설정 (게임 영역이 표시될 때마다 다시 설정)
+        const backToMenuBtnHilo = document.getElementById('backToMenuBtnHilo');
+        if (backToMenuBtnHilo) {
+            // 기존 이벤트 리스너 제거를 위해 클론 후 교체
+            const newBtn = backToMenuBtnHilo.cloneNode(true);
+            backToMenuBtnHilo.replaceWith(newBtn);
+            // 새 버튼에 이벤트 리스너 추가
+            document.getElementById('backToMenuBtnHilo').addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('backToMenuBtnHilo 클릭됨 (setupHiloEventListeners)');
+                this.backToMenu();
+            });
+        }
+        
+        // 하이로우 칩 선택
+        const hiloChips = document.querySelectorAll('.hilo-chip');
+        hiloChips.forEach(chip => {
+            chip.addEventListener('click', () => {
+                this.selectHiloChip(parseInt(chip.dataset.value));
+            });
+        });
+
+        // 하이로우 배팅 옵션 클릭
+        const betOptions = document.querySelectorAll('.hilo-bet-option');
+        betOptions.forEach(option => {
+            option.addEventListener('click', () => {
+                const betType = option.dataset.bet;
+                this.placeHiloBet(betType);
+            });
+        });
+    }
+
+    selectHiloChip(value) {
+        this.hiloSelectedChip = value;
+        document.querySelectorAll('.hilo-chip').forEach(chip => {
+            chip.classList.toggle('selected', parseInt(chip.dataset.value) === value);
+        });
+    }
+
+    async startHilo() {
+        if (this.hiloGamePhase !== 'waiting') return;
+        
+        const cards = await this.drawCards(1);
+        this.hiloCurrentCard = cards[0];
+        this.hiloDrawnCards = [cards[0]];
+        this.hiloRemainingCards = 51;
+        this.hiloGamePhase = 'betting';
+        
+        // 카드 딜링 애니메이션
+        const cardDisplay = document.getElementById('currentHiloCard');
+        const cardImg = document.createElement('img');
+        cardImg.src = cards[0].image;
+        cardImg.style.width = '150px';
+        cardImg.style.height = 'auto';
+        cardImg.style.borderRadius = '10px';
+        cardImg.style.opacity = '0';
+        cardDisplay.innerHTML = '';
+        cardDisplay.appendChild(cardImg);
+        
+        await this.animateCardDeal(cardImg, 0, 0);
+        
+        this.updateHiloProbabilities();
+        this.showMessage('🃏 현재 카드를 확인하고 높음/낮음을 선택하세요!');
+        
+        document.getElementById('startHiloBtn').style.display = 'none';
+        document.getElementById('drawNextCardBtn').style.display = 'none';
+        document.getElementById('clearHiloBetsBtn').style.display = 'block';
+        document.getElementById('changeCardBtn').style.display = 'block';
+        document.getElementById('hiloGamePhaseText').textContent = '배팅 시간';
+    }
+
+    async changeHiloCard() {
+        if (this.hiloGamePhase !== 'betting') return;
+        
+        const cards = await this.drawCards(1);
+        this.hiloCurrentCard = cards[0];
+        this.hiloDrawnCards = [cards[0]];
+        this.hiloRemainingCards = 51;
+        
+        // 카드 교체 애니메이션
+        const cardDisplay = document.getElementById('currentHiloCard');
+        const cardImg = document.createElement('img');
+        cardImg.src = cards[0].image;
+        cardImg.style.width = '150px';
+        cardImg.style.height = 'auto';
+        cardImg.style.borderRadius = '10px';
+        cardImg.style.opacity = '0';
+        cardDisplay.innerHTML = '';
+        cardDisplay.appendChild(cardImg);
+        
+        await this.animateCardDeal(cardImg, 0, 0);
+        
+        this.updateHiloProbabilities();
+        this.showMessage('🔄 카드가 교체되었습니다!');
+    }
+
+    placeHiloBet(betType) {
+        if (this.hiloGamePhase !== 'betting') return;
+        if (this.money < this.hiloSelectedChip) {
+            this.showMessage('💰 학습 포인트가 부족합니다!', 'danger');
+            return;
+        }
+        if (this.hiloBets.higher > 0 || this.hiloBets.lower > 0) {
+            this.showMessage('이미 배팅했습니다!', 'warning');
+            return;
+        }
+
+        this.hiloBets[betType] = this.hiloSelectedChip;
+        this.hiloBetAmount = this.hiloSelectedChip;
+        this.money -= this.hiloSelectedChip;
+        
+        this.updateHiloDisplay();
+        this.showMessage(`🃏 ${betType === 'higher' ? '높음' : '낮음'}에 ${this.hiloSelectedChip}P 배팅했습니다!`);
+        
+        document.getElementById('drawNextCardBtn').style.display = 'block';
+        document.getElementById('clearHiloBetsBtn').style.display = 'none';
+    }
+
+    async drawNextHiloCard() {
+        if (this.hiloGamePhase !== 'betting' || (this.hiloBets.higher === 0 && this.hiloBets.lower === 0)) {
+            this.showMessage('배팅을 먼저 해주세요!', 'warning');
+            return;
+        }
+
+        this.hiloGamePhase = 'result';
+        const cards = await this.drawCards(1);
+        const nextCard = cards[0];
+        this.hiloDrawnCards.push(nextCard);
+        this.hiloRemainingCards--;
+        
+        const result = this.compareHiloCards(this.hiloCurrentCard, nextCard);
+        await this.processHiloResult(result, nextCard);
+    }
+
+    compareHiloCards(currentCard, nextCard) {
+        const currentValue = this.getCardValue(currentCard);
+        const nextValue = this.getCardValue(nextCard);
+        
+        if (nextValue > currentValue) return 'higher';
+        if (nextValue < currentValue) return 'lower';
+        return 'same';
+    }
+
+    getCardValue(card) {
+        const valueMap = {
+            'ACE': 1, '2': 2, '3': 3, '4': 4, '5': 5,
+            '6': 6, '7': 7, '8': 8, '9': 9, '10': 10,
+            'JACK': 11, 'QUEEN': 12, 'KING': 13
+        };
+        return valueMap[card.value] || 0;
+    }
+
+    async processHiloResult(result, nextCard) {
+        const betType = this.hiloBets.higher > 0 ? 'higher' : 'lower';
+        let winnings = 0;
+        let resultMessage = '';
+        
+        // 다음 카드 표시 (애니메이션)
+        const nextCardDisplay = document.getElementById('nextHiloCard');
+        nextCardDisplay.innerHTML = '';
+        const nextCardImg = document.createElement('img');
+        nextCardImg.src = nextCard.image;
+        nextCardImg.alt = `${nextCard.value} of ${nextCard.suit}`;
+        nextCardImg.style.width = '120px';
+        nextCardImg.style.height = 'auto';
+        nextCardImg.style.borderRadius = '10px';
+        nextCardImg.style.opacity = '0';
+        nextCardDisplay.appendChild(nextCardImg);
+        document.getElementById('nextCardResult').style.display = 'block';
+        
+        await this.animateCardDeal(nextCardImg, 0, 0);
+        
+        if (result === 'same') {
+            resultMessage = '동일한 카드입니다! 배팅금 반환';
+            this.money += this.hiloBetAmount;
+            winnings = 0;
+        } else if ((betType === 'higher' && result === 'higher') || (betType === 'lower' && result === 'lower')) {
+            // 승리
+            const multiplier = this.calculateHiloMultiplier(betType);
+            winnings = Math.floor(this.hiloBetAmount * multiplier);
+            this.money += this.hiloBetAmount + winnings;
+            resultMessage = `승리! +${winnings}P 획득!`;
+            this.winCount++;
+        } else {
+            resultMessage = '패배!';
+            winnings = -this.hiloBetAmount;
+        }
+        
+        document.getElementById('hiloResultMessage').textContent = resultMessage;
+        document.getElementById('hiloResultMessage').className = `result-message ${winnings > 0 ? 'win' : winnings < 0 ? 'lose' : 'tie'}`;
+        
+        // 히스토리 기록
+        this.hiloHistory.push({
+            currentCard: this.hiloCurrentCard,
+            nextCard: nextCard,
+            bet: betType,
+            result: result,
+            winnings: winnings
+        });
+        
+        this.updateHiloHistory();
+        this.updateDisplay();
+        
+        // 유저 데이터 저장
+        this.saveGameData('hilo', {
+            win: winnings > 0,
+            loss: winnings < 0,
+            tie: winnings === 0,
+            betAmount: this.hiloBetAmount,
+            winnings: winnings
+        });
+        
+        if (winnings > 0) {
+            this.showMessage(`🎉 ${resultMessage}`, 'success');
+            this.playSound('win');
+        } else if (winnings < 0) {
+            this.showMessage(resultMessage, 'danger');
+            this.playSound('lose');
+        } else {
+            this.showMessage(resultMessage, 'info');
+        }
+        
+        // 다음 라운드 준비
+        setTimeout(() => {
+            this.hiloCurrentCard = nextCard;
+            this.hiloBets = { higher: 0, lower: 0 };
+            this.hiloBetAmount = 0;
+            this.hiloGamePhase = 'betting';
+            this.updateHiloDisplay();
+            this.updateHiloProbabilities();
+            document.getElementById('drawNextCardBtn').style.display = 'none';
+            document.getElementById('clearHiloBetsBtn').style.display = 'block';
+            document.getElementById('nextCardResult').style.display = 'none';
+        }, 3000);
+    }
+
+    calculateHiloMultiplier(betType) {
+        // 확률 기반 배당률 계산 (하우스 엣지 5% 포함)
+        const prob = betType === 'higher' 
+            ? parseFloat(document.getElementById('higherProbDisplay').textContent.replace('%', ''))
+            : parseFloat(document.getElementById('lowerProbDisplay').textContent.replace('%', ''));
+        
+        if (prob === 0) return 1;
+        return (1 / (prob / 100)) * 0.95; // 하우스 엣지 5%
+    }
+
+    updateHiloProbabilities() {
+        if (!this.hiloCurrentCard) return;
+        
+        const currentValue = this.getCardValue(this.hiloCurrentCard);
+        let higher = 0, lower = 0, same = 0;
+        
+        // 남은 카드 중 확률 계산 (간단한 추정)
+        for (let i = 1; i <= 13; i++) {
+            const count = (i === currentValue) ? 3 : 4; // 현재 카드 제외
+            if (i > currentValue) higher += count;
+            else if (i < currentValue) lower += count;
+            else same += count;
+        }
+        
+        const total = higher + lower + same;
+        const higherProb = ((higher / total) * 100).toFixed(2);
+        const lowerProb = ((lower / total) * 100).toFixed(2);
+        const sameProb = ((same / total) * 100).toFixed(2);
+        
+        document.getElementById('higherProbDisplay').textContent = `${higherProb}%`;
+        document.getElementById('lowerProbDisplay').textContent = `${lowerProb}%`;
+        document.getElementById('sameProbDisplay').textContent = `${sameProb}%`;
+        
+        // 배당률 계산
+        const higherMultiplier = ((1 / (parseFloat(higherProb) / 100)) * 0.95).toFixed(2);
+        const lowerMultiplier = ((1 / (parseFloat(lowerProb) / 100)) * 0.95).toFixed(2);
+        
+        document.getElementById('higherProb').textContent = `${higherProb}%`;
+        document.getElementById('lowerProb').textContent = `${lowerProb}%`;
+        document.getElementById('higherMultiplier').textContent = `x${higherMultiplier}`;
+        document.getElementById('lowerMultiplier').textContent = `x${lowerMultiplier}`;
+        
+        document.getElementById('remainingCards').textContent = this.hiloRemainingCards;
+    }
+
+    updateHiloDisplay() {
+        // 현재 카드 표시
+        const currentCardDisplay = document.getElementById('currentHiloCard');
+        if (this.hiloCurrentCard) {
+            currentCardDisplay.innerHTML = `
+                <img src="${this.hiloCurrentCard.image}" alt="${this.hiloCurrentCard.value} of ${this.hiloCurrentCard.suit}" style="width: 150px; height: auto; border-radius: 10px;">
+            `;
+        } else {
+            currentCardDisplay.innerHTML = '<div class="card-placeholder">카드를 뽑아주세요</div>';
+        }
+        
+        // 배팅 표시
+        Object.keys(this.hiloBets).forEach(betType => {
+            const chipsContainer = document.getElementById(`${betType}Chips`);
+            chipsContainer.innerHTML = '';
+            if (this.hiloBets[betType] > 0) {
+                const chip = document.createElement('div');
+                chip.className = 'bet-chip';
+                chip.textContent = `${this.hiloBets[betType]}P`;
+                chipsContainer.appendChild(chip);
+            }
+        });
+        
+        // 학습 포인트 실시간 업데이트
+        this.updateDisplay();
+    }
+
+    updateHiloHistory() {
+        const historyContainer = document.getElementById('hiloHistoryResults');
+        historyContainer.innerHTML = '';
+        
+        const recentHistory = this.hiloHistory.slice(-10).reverse();
+        recentHistory.forEach(entry => {
+            const historyItem = document.createElement('div');
+            historyItem.className = 'history-item';
+            const resultIcon = entry.winnings > 0 ? '✅' : entry.winnings < 0 ? '❌' : '➖';
+            historyItem.innerHTML = `
+                <span>${resultIcon} ${entry.bet === 'higher' ? '높음' : '낮음'}</span>
+                <span>${entry.winnings > 0 ? '+' : ''}${entry.winnings}P</span>
+            `;
+            historyContainer.appendChild(historyItem);
+        });
+    }
+
+    clearHiloBets() {
+        if (this.hiloBetAmount > 0) {
+            this.money += this.hiloBetAmount;
+            this.hiloBets = { higher: 0, lower: 0 };
+            this.hiloBetAmount = 0;
+            this.updateHiloDisplay();
+            document.getElementById('drawNextCardBtn').style.display = 'none';
+        }
+    }
+
+    clearHiloHistory() {
+        this.hiloHistory = [];
+        this.updateHiloHistory();
+    }
+
+    hiloHalfBet() {
+        if (this.hiloBetAmount > 0) {
+            const half = Math.floor(this.hiloBetAmount / 2);
+            this.money += half;
+            this.hiloBetAmount = half;
+            const betType = this.hiloBets.higher > 0 ? 'higher' : 'lower';
+            this.hiloBets[betType] = half;
+            this.updateHiloDisplay();
+        }
+    }
+
+    hiloDoubleBet() {
+        if (this.hiloBetAmount > 0 && this.money >= this.hiloBetAmount) {
+            this.money -= this.hiloBetAmount;
+            this.hiloBetAmount *= 2;
+            const betType = this.hiloBets.higher > 0 ? 'higher' : 'lower';
+            this.hiloBets[betType] = this.hiloBetAmount;
+            this.updateHiloDisplay();
+        }
+    }
+
+    showHiloRules() {
+        document.getElementById('hiloRulesModal').style.display = 'flex';
+    }
+
+    hideHiloRules() {
+        document.getElementById('hiloRulesModal').style.display = 'none';
+    }
+
+    showHiloProbability() {
+        // 확률 분석 모달 표시 (추후 구현)
+        this.showMessage('📊 하이로우 확률 분석 기능은 준비 중입니다!', 'info');
+    }
+
+    // ========== 사운드 관리 메서드 ==========
+    toggleBgMusic() {
+        this.bgMusicEnabled = !this.bgMusicEnabled;
+        const icon = document.getElementById('bgMusicIcon');
+        
+        if (this.bgMusicEnabled) {
+            this.bgMusic.play().catch(e => console.log('배경 음악 재생 실패:', e));
+            icon.textContent = '🔊';
+        } else {
+            this.bgMusic.pause();
+            icon.textContent = '🔇';
+        }
+    }
+
+    toggleSoundEffects() {
+        this.soundEffectsEnabled = !this.soundEffectsEnabled;
+        const icon = document.getElementById('soundEffectsIcon');
+        icon.textContent = this.soundEffectsEnabled ? '🔊' : '🔇';
+    }
+
+    playSound(soundType) {
+        if (!this.soundEffectsEnabled) return;
+        
+        let sound;
+        switch(soundType) {
+            case 'win':
+                sound = this.winSound;
+                break;
+            case 'lose':
+                sound = this.loseSound;
+                break;
+            case 'card':
+                sound = this.cardDealSound;
+                break;
+            case 'dice':
+                sound = this.diceRollSound;
+                break;
+            default:
+                return;
+        }
+        
+        if (sound) {
+            sound.currentTime = 0;
+            sound.play().catch(e => console.log('효과음 재생 실패:', e));
+        }
+    }
+
+    // ========== 다이스 API 통합 ==========
+    async rollDiceWithAPI() {
+        // Random.org API 사용 (무료, 일일 제한 있음)
+        // API 문서: https://www.random.org/clients/http/api/
+        try {
+            // 1-6 범위의 난수 2개 요청
+            const response = await fetch('https://www.random.org/integers/?num=2&min=1&max=6&col=1&base=10&format=plain&rnd=new');
+            
+            if (response.ok) {
+                const text = await response.text();
+                const numbers = text.trim().split('\n').map(n => parseInt(n));
+                return { die1: numbers[0], die2: numbers[1], sum: numbers[0] + numbers[1] };
+            } else {
+                throw new Error('API 요청 실패');
+            }
+        } catch (error) {
+            console.log('Random.org API 실패, Math.random() 사용:', error);
+            // Fallback to Math.random()
+            const die1 = Math.floor(Math.random() * 6) + 1;
+            const die2 = Math.floor(Math.random() * 6) + 1;
+            return { die1, die2, sum: die1 + die2 };
+        }
+    }
+
+    // ========== 카드 딜링 애니메이션 ==========
+    async animateCardDeal(cardElement, targetPosition, delay = 0) {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                cardElement.style.opacity = '0';
+                cardElement.style.transform = 'translateY(-100px) rotateY(180deg)';
+                cardElement.style.transition = 'none';
+                
+                // 카드 딜링 사운드
+                this.playSound('card');
+                
+                requestAnimationFrame(() => {
+                    cardElement.style.transition = 'all 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55)';
+                    cardElement.style.opacity = '1';
+                    cardElement.style.transform = 'translateY(0) rotateY(0deg)';
+                    
+                    setTimeout(() => {
+                        resolve();
+                    }, 600);
+                });
+            }, delay);
+        });
+    }
+
+    async animateCardFlip(cardElement) {
+        return new Promise((resolve) => {
+            cardElement.style.transition = 'transform 0.5s';
+            cardElement.style.transform = 'rotateY(180deg)';
+            
+            setTimeout(() => {
+                cardElement.style.transform = 'rotateY(0deg)';
+                setTimeout(() => resolve(), 500);
+            }, 500);
+        });
+    }
 }
 
 // 게임 인스턴스 생성
 let game;
 
 document.addEventListener('DOMContentLoaded', function() {
-    game = new RoyalCasino();
+    // Firebase 인증이 완료된 후 게임 초기화
+    if (typeof auth !== 'undefined' && auth) {
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                // 로그인된 경우에만 게임 시작
+                if (!game) {
+                    game = new RoyalCasino();
+                    window.game = game; // 전역 접근 가능하도록
+                }
+            }
+        });
+    } else {
+        // Firebase가 설정되지 않은 경우에도 게임 실행 가능
+        game = new RoyalCasino();
+        window.game = game;
+    }
 });

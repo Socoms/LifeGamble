@@ -5,8 +5,119 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>확률과 전략 학습 게임 - Probability & Strategy Learning</title>
     <link rel="stylesheet" href="css/style.css">
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
+    <!-- 로그인/회원가입 모달 -->
+    <div id="authModal" class="auth-modal" style="display: none;">
+        <div class="auth-content">
+            <div class="auth-tabs">
+                <button class="auth-tab active" data-tab="login">로그인</button>
+                <button class="auth-tab" data-tab="signup">회원가입</button>
+            </div>
+            
+            <!-- 로그인 폼 -->
+            <div id="loginForm" class="auth-form active">
+                <h3>로그인</h3>
+                <div class="form-group">
+                    <label>이메일</label>
+                    <input type="email" id="loginEmail" placeholder="이메일을 입력하세요" required>
+                </div>
+                <div class="form-group">
+                    <label>비밀번호</label>
+                    <input type="password" id="loginPassword" placeholder="비밀번호를 입력하세요" required>
+                </div>
+                <button id="loginBtn" class="btn auth-btn">로그인</button>
+                <div id="loginError" class="error-message"></div>
+            </div>
+            
+            <!-- 회원가입 폼 -->
+            <div id="signupForm" class="auth-form">
+                <h3>회원가입</h3>
+                <div class="form-group">
+                    <label>이메일</label>
+                    <input type="email" id="signupEmail" placeholder="이메일을 입력하세요" required>
+                </div>
+                <div class="form-group">
+                    <label>비밀번호</label>
+                    <input type="password" id="signupPassword" placeholder="비밀번호 (최소 6자)" required>
+                </div>
+                <div class="form-group">
+                    <label>비밀번호 확인</label>
+                    <input type="password" id="signupPasswordConfirm" placeholder="비밀번호를 다시 입력하세요" required>
+                </div>
+                <div class="form-group">
+                    <label>닉네임</label>
+                    <input type="text" id="signupNickname" placeholder="닉네임을 입력하세요" required>
+                </div>
+                <button id="signupBtn" class="btn auth-btn">회원가입</button>
+                <div id="signupError" class="error-message"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 유저 정보 표시 -->
+    <div id="userInfo" class="user-info" style="display: none;">
+        <!-- 통계 정보 패널 -->
+        <div class="user-stats-panel">
+            <div class="user-stat-item">
+                <div class="stat-icon">📊</div>
+                <div class="stat-content">
+                    <h4>학습 포인트</h4>
+                    <span id="userMoney" class="stat-value">1000</span>
+                </div>
+            </div>
+            <div class="user-stat-item">
+                <div class="stat-icon">🎯</div>
+                <div class="stat-content">
+                    <h4>현재 게임</h4>
+                    <span id="userCurrentGame" class="stat-value">-</span>
+                </div>
+            </div>
+            <div class="user-stat-item">
+                <div class="stat-icon">📈</div>
+                <div class="stat-content">
+                    <h4>성공한 전략</h4>
+                    <span id="userWinCount" class="stat-value">0</span>
+                </div>
+            </div>
+        </div>
+        <div class="user-profile">
+            <span id="userNickname" class="user-nickname"></span>
+            <button id="logoutBtn" class="btn logout-btn">로그아웃</button>
+        </div>
+    </div>
+    
+    <!-- 사운드 컨트롤 -->
+    <div class="sound-controls">
+        <button id="bgMusicToggle" class="sound-btn" title="배경 음악">
+            <span id="bgMusicIcon">🔇</span>
+        </button>
+        <button id="soundEffectsToggle" class="sound-btn" title="효과음">
+            <span id="soundEffectsIcon">🔊</span>
+        </button>
+    </div>
+    
+    <!-- 오디오 요소 -->
+    <audio id="bgMusic" loop>
+        <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="winSound" preload="auto">
+        <source src="https://www.soundjay.com/misc/sounds/bell-ringing-05.wav" type="audio/wav">
+    </audio>
+    <audio id="loseSound" preload="auto">
+        <source src="https://www.soundjay.com/misc/sounds/fail-buzzer-02.wav" type="audio/wav">
+    </audio>
+    <audio id="cardDealSound" preload="auto">
+        <source src="https://www.soundjay.com/misc/sounds/card-flip-01.wav" type="audio/wav">
+    </audio>
+    <audio id="diceRollSound" preload="auto">
+        <source src="https://www.soundjay.com/misc/sounds/dice-roll-01.wav" type="audio/wav">
+    </audio>
+    
     <div class="container">
         <h1>📊 확률과 전략 학습 게임</h1>
         <h2 class="subtitle">Probability & Strategy Learning</h2>
@@ -29,27 +140,30 @@
                     <p>최적 전략과 기대값 계산<br>수학적 의사결정 연습</p>
                     <span class="difficulty">학습 난이도: ⭐⭐⭐⭐</span>
                 </div>
+                
+                <div class="mode-card" data-mode="dice">
+                    <div class="mode-icon">🎲</div>
+                    <h4>다이스 확률 학습</h4>
+                    <p>주사위 조합 확률 분석<br>크랩스 전략 학습</p>
+                    <span class="difficulty">학습 난이도: ⭐⭐⭐</span>
+                </div>
+                <div class="mode-card" data-mode="hilo">
+                    <div class="mode-icon">🃏</div>
+                    <h4>하이로우 카드 학습</h4>
+                    <p>카드 높낮이 확률 계산<br>조건부 확률 이해</p>
+                    <span class="difficulty">학습 난이도: ⭐⭐⭐</span>
+                </div>
+                <div class="mode-card" data-mode="holdem">
+                    <div class="mode-icon">🎴</div>
+                    <h4>텍사스 홀덤</h4>
+                    <p>멀티플레이어 포커 게임<br>최대 6인 동시 플레이</p>
+                    <span class="difficulty">학습 난이도: ⭐⭐⭐⭐⭐</span>
+                </div>
             </div>
         </div>
         
         <!-- 공통 게임 영역 -->
         <div class="game-area" style="display: none;">
-            <!-- 게임 상태 패널 -->
-            <div class="status-panel">
-                <div class="status-item">
-                    <h4>📊 학습 포인트</h4>
-                    <span id="money" class="value">1000</span>
-                </div>
-                <div class="status-item">
-                    <h4>🎯 현재 게임</h4>
-                    <span id="currentGame" class="value">-</span>
-                </div>
-                <div class="status-item">
-                    <h4>📈 성공한 전략</h4>
-                    <span id="winCount" class="value">0</span>
-                </div>
-            </div>
-            
             <!-- 게임 안내 메시지 -->
             <div id="message" class="status-text">학습 모드를 선택하고 시작하세요!</div>
             
@@ -125,6 +239,128 @@
                     </ul>
                 </div>
                 <button id="closeStrategy" class="btn close-rules">확인</button>
+            </div>
+        </div>
+
+        <!-- 다이스 게임 규칙 모달 -->
+        <div id="diceRulesModal" class="game-rules" style="display: none;">
+            <div class="rules-content" style="max-width: 700px;">
+                <h4>🎲 다이스 게임 학습 가이드</h4>
+                <div id="diceRulesText" style="color: #fff; line-height: 1.8;">
+                    <h5 style="color: #ffd93d; margin-top: 15px;">게임 규칙</h5>
+                    <ul>
+                        <li><strong>숫자 선택:</strong> 1부터 99까지의 숫자를 슬라이더로 선택합니다</li>
+                        <li><strong>배팅 옵션:</strong> 선택한 숫자보다 "더 작은" 또는 "더 큰" 숫자가 나올지 예측합니다</li>
+                        <li><strong>게임 진행:</strong> 0부터 100까지의 랜덤 숫자가 생성됩니다</li>
+                        <li><strong>승리 조건:</strong> 예측한 대로 숫자가 나오면 승리, 그렇지 않으면 패배입니다</li>
+                    </ul>
+                    <h5 style="color: #ffd93d; margin-top: 15px;">확률 계산</h5>
+                    <ul>
+                        <li><strong>더 작은 확률:</strong> 선택한 숫자 / 100 × 100%</li>
+                        <li><strong>더 큰 확률:</strong> (100 - 선택한 숫자) / 100 × 100%</li>
+                        <li>예: 숫자 50을 선택하면 더 작은 확률 50%, 더 큰 확률 50%</li>
+                        <li>예: 숫자 30을 선택하면 더 작은 확률 30%, 더 큰 확률 70%</li>
+                    </ul>
+                    <h5 style="color: #ffd93d; margin-top: 15px;">배당률 계산</h5>
+                    <ul>
+                        <li>배당률 = 1 / 확률 × (1 - 하우스 엣지)</li>
+                        <li>하우스 엣지: 1% (카지노 우위)</li>
+                        <li>확률이 낮을수록 배당률이 높아집니다</li>
+                        <li>예: 50% 확률 → 약 x1.98 배당</li>
+                        <li>예: 30% 확률 → 약 x3.30 배당</li>
+                    </ul>
+                    <h5 style="color: #ffd93d; margin-top: 15px;">학습 목표</h5>
+                    <ul>
+                        <li>확률과 배당률의 관계 이해</li>
+                        <li>기대값 계산 방법 학습</li>
+                        <li>하우스 엣지(카지노 우위) 이해</li>
+                        <li>리스크 관리 개념 학습</li>
+                    </ul>
+                </div>
+                <button id="closeDiceRules" class="btn close-rules">확인</button>
+            </div>
+        </div>
+
+        <!-- 하이로우 게임 규칙 모달 -->
+        <div id="hiloRulesModal" class="game-rules" style="display: none;">
+            <div class="rules-content" style="max-width: 700px;">
+                <h4>🃏 하이로우 카드 게임 학습 가이드</h4>
+                <div id="hiloRulesText" style="color: #fff; line-height: 1.8;">
+                    <h5 style="color: #ffd93d; margin-top: 15px;">게임 규칙</h5>
+                    <ul>
+                        <li>현재 카드를 보고 다음 카드가 높을지 낮을지 배팅합니다</li>
+                        <li><strong>높음:</strong> 다음 카드가 현재 카드보다 높으면 승리</li>
+                        <li><strong>낮음:</strong> 다음 카드가 현재 카드보다 낮으면 승리</li>
+                        <li>동일한 카드가 나오면 보통 무효 처리되거나 특별 규칙 적용</li>
+                        <li>카드 교체 기능으로 새로운 카드로 시작할 수 있습니다</li>
+                    </ul>
+                    <h5 style="color: #ffd93d; margin-top: 15px;">카드 값</h5>
+                    <ul>
+                        <li>A(에이스) = 1 (가장 낮음)</li>
+                        <li>2-10 = 숫자 그대로</li>
+                        <li>J(잭) = 11, Q(퀸) = 12, K(킹) = 13 (가장 높음)</li>
+                    </ul>
+                    <h5 style="color: #ffd93d; margin-top: 15px;">확률 계산</h5>
+                    <ul>
+                        <li>남은 카드 수에 따라 확률이 실시간으로 변합니다</li>
+                        <li>현재 카드가 높을수록 낮음 배팅의 확률이 높아집니다</li>
+                        <li>현재 카드가 낮을수록 높음 배팅의 확률이 높아집니다</li>
+                        <li>조건부 확률의 개념을 학습할 수 있습니다</li>
+                    </ul>
+                    <h5 style="color: #ffd93d; margin-top: 15px;">학습 목표</h5>
+                    <ul>
+                        <li>조건부 확률 이해</li>
+                        <li>카드 확률 계산</li>
+                        <li>전략적 의사결정</li>
+                        <li>기대값 계산</li>
+                    </ul>
+                </div>
+                <button id="closeHiloRules" class="btn close-rules">확인</button>
+            </div>
+        </div>
+
+        <!-- 홀덤 게임 규칙 모달 -->
+        <div id="holdemRulesModal" class="game-rules" style="display: none;">
+            <div class="rules-content" style="max-width: 700px;">
+                <h4>🎴 텍사스 홀덤 게임 규칙</h4>
+                <div id="holdemRulesText" style="color: #fff; line-height: 1.8;">
+                    <h5 style="color: #ffd93d; margin-top: 15px;">게임 개요</h5>
+                    <ul>
+                        <li>최대 6명의 플레이어가 함께 플레이하는 멀티플레이어 포커 게임입니다</li>
+                        <li>각 플레이어는 2장의 개인 카드(홀 카드)를 받습니다</li>
+                        <li>딜러가 5장의 커뮤니티 카드를 공개합니다</li>
+                        <li>7장의 카드 중 5장을 조합하여 최고의 패를 만듭니다</li>
+                    </ul>
+                    <h5 style="color: #ffd93d; margin-top: 15px;">게임 진행</h5>
+                    <ul>
+                        <li><strong>프리플롭:</strong> 홀 카드 2장을 받고 첫 번째 베팅 라운드</li>
+                        <li><strong>플롭:</strong> 커뮤니티 카드 3장 공개, 두 번째 베팅 라운드</li>
+                        <li><strong>턴:</strong> 커뮤니티 카드 4장째 공개, 세 번째 베팅 라운드</li>
+                        <li><strong>리버:</strong> 커뮤니티 카드 5장째 공개, 마지막 베팅 라운드</li>
+                        <li><strong>쇼다운:</strong> 남은 플레이어들이 패를 공개하고 승자 결정</li>
+                    </ul>
+                    <h5 style="color: #ffd93d; margin-top: 15px;">베팅 액션</h5>
+                    <ul>
+                        <li><strong>체크:</strong> 베팅하지 않고 차례를 넘김 (베팅이 없을 때만 가능)</li>
+                        <li><strong>콜:</strong> 현재 베팅 금액에 맞춤</li>
+                        <li><strong>레이즈:</strong> 베팅 금액을 올림</li>
+                        <li><strong>폴드:</strong> 패를 버리고 게임에서 나감</li>
+                    </ul>
+                    <h5 style="color: #ffd93d; margin-top: 15px;">패 순위 (높은 순)</h5>
+                    <ul>
+                        <li>로얄 플러시 (A-K-Q-J-10, 모두 같은 무늬)</li>
+                        <li>스트레이트 플러시 (연속된 5장, 모두 같은 무늬)</li>
+                        <li>포카드 (같은 숫자 4장)</li>
+                        <li>풀하우스 (트리플 + 페어)</li>
+                        <li>플러시 (같은 무늬 5장)</li>
+                        <li>스트레이트 (연속된 5장)</li>
+                        <li>트리플 (같은 숫자 3장)</li>
+                        <li>투 페어 (페어 2개)</li>
+                        <li>원 페어 (페어 1개)</li>
+                        <li>하이 카드 (아무것도 없을 때 가장 높은 카드)</li>
+                    </ul>
+                </div>
+                <button id="closeHoldemRules" class="btn close-rules">확인</button>
             </div>
         </div>
 
@@ -377,8 +613,437 @@
                 </div>
             </div>
         </div>
+
+        <!-- 다이스 게임 영역 -->
+        <div id="diceGameArea" class="card-game-area" style="display: none;">
+            <!-- 다이스 헤더 -->
+            <div class="dice-header">
+                <div class="game-info">
+                    <h2>🎲 다이스 확률 학습</h2>
+                    <div class="game-status">
+                        <span id="diceGamePhaseText">배팅 시간</span>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button id="showDiceRulesBtn" class="btn rules-btn">📖 학습 가이드</button>
+                    <button id="backToMenuBtnDice" class="btn back-btn">🏠 메뉴로 돌아가기</button>
+                </div>
+            </div>
+
+            <!-- 다이스 테이블 -->
+            <div class="dice-table-new">
+                <!-- 왼쪽 패널: 배팅 컨트롤 -->
+                <div class="dice-left-panel">
+                    <!-- 배팅 금액 -->
+                    <div class="bet-amount-control">
+                        <h4>배팅 금액</h4>
+                        <div class="bet-input-group">
+                            <input type="number" id="diceBetAmount" value="10" min="1" step="1" class="bet-input">
+                        </div>
+                        <div class="bet-quick-buttons">
+                            <button id="diceBetHalf" class="btn-small">/2</button>
+                            <button id="diceBetDouble" class="btn-small">x2</button>
+                        </div>
+                    </div>
+
+                    <!-- 숫자 선택 슬라이더 -->
+                    <div class="number-selector">
+                        <h4>귀하의 숫자</h4>
+                        <div class="slider-container">
+                            <input type="range" id="diceNumberSlider" min="1" max="99" value="50" class="dice-slider">
+                            <div class="slider-value">
+                                <span id="selectedDiceNumber">50</span>
+                                <span class="dice-icon">🎲</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 배팅 옵션 -->
+                    <div class="dice-bet-options">
+                        <button id="diceBetSmaller" class="dice-bet-btn smaller-btn">
+                            <span>✓</span> 더 작은
+                        </button>
+                        <button id="diceBetLarger" class="dice-bet-btn larger-btn">
+                            <span>▲</span> 더 큰
+                        </button>
+                    </div>
+
+                    <!-- 게임 시작 버튼 -->
+                    <div class="dice-start-section">
+                        <button id="diceStartGameBtn" class="btn deal-btn" style="width: 100%; margin-top: 20px;">🎲 게임 시작</button>
+                    </div>
+
+                    <!-- 학습 포인트 선택 -->
+                    <div class="betting-chips">
+                        <h4>빠른 선택</h4>
+                        <div class="chips-grid">
+                            <div class="dice-chip" data-value="10">10P</div>
+                            <div class="dice-chip" data-value="25">25P</div>
+                            <div class="dice-chip" data-value="50">50P</div>
+                            <div class="dice-chip" data-value="100">100P</div>
+                            <div class="dice-chip" data-value="500">500P</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 중앙 게임 영역 -->
+                <div class="dice-main-area">
+                    <!-- 최근 결과 -->
+                    <div class="recent-results">
+                        <div id="diceRecentResults" class="recent-results-list"></div>
+                    </div>
+
+                    <!-- 메인 숫자 표시 -->
+                    <div class="dice-numbers-display">
+                        <div class="target-number-section">
+                            <div class="number-label">귀하의 숫자</div>
+                            <div id="targetDiceNumber" class="big-number">50</div>
+                            <div class="dice-icon-small">🎲</div>
+                        </div>
+                        <div class="vs-divider">VS</div>
+                        <div class="rolled-number-section">
+                            <div class="number-label">나온 숫자</div>
+                            <div id="rolledDiceNumber" class="big-number">00</div>
+                        </div>
+                    </div>
+
+                    <!-- 승수 및 확률 정보 -->
+                    <div class="dice-odds-info">
+                        <div class="odds-item">
+                            <div class="odds-label">승수</div>
+                            <div id="diceMultiplier" class="odds-value">x1.00</div>
+                        </div>
+                        <div class="odds-item">
+                            <div class="odds-label">가능한 상금</div>
+                            <div id="dicePossibleWin" class="odds-value">0P</div>
+                        </div>
+                        <div class="odds-item">
+                            <div class="odds-label">승리 확률</div>
+                            <div id="diceWinProbability" class="odds-value">50%</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 오른쪽 패널: 통계 및 히스토리 -->
+                <div class="dice-right-panel">
+                    <!-- 확률 정보 -->
+                    <div class="probability-panel">
+                        <h4>📊 확률 분석</h4>
+                        <div id="diceProbabilityInfo" style="color: #fff; font-size: 0.9em; line-height: 1.6;">
+                            <div>더 작은 확률: <span id="smallerProb">50%</span></div>
+                            <div>더 큰 확률: <span id="largerProb">50%</span></div>
+                            <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.2);">
+                                <strong style="color: #ffd700;">기대값:</strong>
+                                <div id="diceEV">-1.00%</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 통계 기록 -->
+                    <div class="game-history">
+                        <div class="history-header">
+                            <span>통계 기록</span>
+                            <button id="clearDiceHistoryBtn" class="btn-small">초기화</button>
+                        </div>
+                        <div id="diceHistoryResults" class="history-results"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 하이로우 게임 영역 -->
+        <div id="hiloGameArea" class="card-game-area" style="display: none;">
+            <!-- 하이로우 헤더 -->
+            <div class="hilo-header">
+                <div class="game-info">
+                    <h2>🃏 하이로우 카드 학습</h2>
+                    <div class="game-status">
+                        <span id="hiloGamePhaseText">배팅 시간</span>
+                        <div id="hiloGameTimer" class="timer">-</div>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button id="showHiloRulesBtn" class="btn rules-btn">📖 학습 가이드</button>
+                    <button id="showHiloProbabilityBtn" class="btn rules-btn">📊 확률 분석</button>
+                    <button id="backToMenuBtnHilo" class="btn back-btn">🏠 메뉴로 돌아가기</button>
+                </div>
+            </div>
+
+            <!-- 하이로우 테이블 -->
+            <div class="hilo-table">
+                <!-- 메인 게임 영역 -->
+                <div class="main-game-area">
+                    <!-- 현재 카드 영역 -->
+                    <div class="hilo-card-area">
+                        <div class="current-card-section">
+                            <h3 style="color: #ffd93d; margin-bottom: 15px;">현재 카드</h3>
+                            <div id="currentHiloCard" class="hilo-card-display">
+                                <div class="card-placeholder">카드를 뽑아주세요</div>
+                            </div>
+                            <button id="changeCardBtn" class="btn change-card-btn" style="display: none;">🔄 카드 교체</button>
+                        </div>
+                    </div>
+
+                    <!-- 배팅 옵션 -->
+                    <div class="hilo-betting-options">
+                        <div class="hilo-bet-option higher-option" data-bet="higher">
+                            <div class="bet-label-large">높음</div>
+                            <div class="bet-arrow">⬆️</div>
+                            <div class="bet-probability" id="higherProb">-</div>
+                            <div class="bet-multiplier" id="higherMultiplier">x-</div>
+                            <div class="bet-chips-container" id="higherChips"></div>
+                        </div>
+                        
+                        <div class="hilo-bet-option lower-option" data-bet="lower">
+                            <div class="bet-label-large">낮음</div>
+                            <div class="bet-arrow">⬇️</div>
+                            <div class="bet-probability" id="lowerProb">-</div>
+                            <div class="bet-multiplier" id="lowerMultiplier">x-</div>
+                            <div class="bet-chips-container" id="lowerChips"></div>
+                        </div>
+                    </div>
+
+                    <!-- 다음 카드 결과 -->
+                    <div id="nextCardResult" class="next-card-result" style="display: none;">
+                        <h3 style="color: #ffd93d; margin-bottom: 15px;">다음 카드</h3>
+                        <div id="nextHiloCard" class="hilo-card-display"></div>
+                        <div id="hiloResultMessage" class="result-message"></div>
+                    </div>
+                </div>
+
+                <!-- 사이드 패널 -->
+                <div class="side-panel">
+                    <!-- 학습 포인트 선택 -->
+                    <div class="betting-chips">
+                        <h4>학습 포인트</h4>
+                        <p style="font-size: 0.85em; color: #ccc; margin-bottom: 10px;">전략 테스트용 가상 자산</p>
+                        <div class="chips-grid">
+                            <div class="hilo-chip" data-value="10">10P</div>
+                            <div class="hilo-chip" data-value="25">25P</div>
+                            <div class="hilo-chip" data-value="50">50P</div>
+                            <div class="hilo-chip" data-value="100">100P</div>
+                            <div class="hilo-chip" data-value="500">500P</div>
+                        </div>
+                        <div style="margin-top: 10px;">
+                            <button class="btn-small" id="hiloHalfBtn">/2</button>
+                            <button class="btn-small" id="hiloDoubleBtn">x2</button>
+                        </div>
+                    </div>
+                    
+                    <!-- 확률 정보 패널 -->
+                    <div class="probability-panel" style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; margin: 15px 0; border: 1px solid rgba(212,175,55,0.3);">
+                        <h4 style="color: #d4af37; margin-bottom: 10px; font-size: 1em;">📊 카드 확률 분석</h4>
+                        <div id="hiloProbabilityInfo" style="color: #fff; font-size: 0.9em; line-height: 1.6;">
+                            <div>높음 확률: <span id="higherProbDisplay">-</span></div>
+                            <div>낮음 확률: <span id="lowerProbDisplay">-</span></div>
+                            <div>동일 확률: <span id="sameProbDisplay">-</span></div>
+                            <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.2);">
+                                <strong style="color: #ffd700;">남은 카드:</strong> <span id="remainingCards">52</span>장
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 게임 컨트롤 -->
+                    <div class="game-controls">
+                        <button id="startHiloBtn" class="btn deal-btn">🃏 게임 시작</button>
+                        <button id="drawNextCardBtn" class="btn deal-btn" style="display: none;">다음 카드 뽑기</button>
+                        <button id="clearHiloBetsBtn" class="btn clear-btn" style="display: none;">선택 취소</button>
+                    </div>
+
+                    <!-- 통계 기록 -->
+                    <div class="game-history">
+                        <div class="history-header">
+                            <span>통계 기록</span>
+                            <button id="clearHiloHistoryBtn" class="btn-small">초기화</button>
+                        </div>
+                        <div id="hiloHistoryResults" class="history-results"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 홀덤 게임 영역 -->
+        <div id="holdemGameArea" class="card-game-area" style="display: none;">
+            <!-- 홀덤 헤더 -->
+            <div class="holdem-header">
+                <div class="game-info">
+                    <h2>🎴 텍사스 홀덤</h2>
+                    <div class="game-status">
+                        <span id="holdemGamePhaseText">대기 중</span>
+                        <div id="holdemGameTimer" class="timer">-</div>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button id="showHoldemRulesBtn" class="btn rules-btn">📖 게임 규칙</button>
+                    <button id="backToMenuBtnHoldem" class="btn back-btn">🏠 메뉴로 돌아가기</button>
+                </div>
+            </div>
+
+            <!-- 홀덤 테이블 -->
+            <div class="holdem-table">
+                <!-- 커뮤니티 카드 영역 -->
+                <div class="community-cards-area">
+                    <div class="community-label">커뮤니티 카드</div>
+                    <div id="communityCards" class="community-cards">
+                        <div class="card-slot empty"></div>
+                        <div class="card-slot empty"></div>
+                        <div class="card-slot empty"></div>
+                        <div class="card-slot empty"></div>
+                        <div class="card-slot empty"></div>
+                    </div>
+                    <div id="potAmount" class="pot-display">팟: 0P</div>
+                </div>
+
+                <!-- 플레이어 테이블 (원형 배치) -->
+                <div class="holdem-players-table">
+                    <!-- 플레이어 슬롯 6개 -->
+                    <div class="player-slot" data-seat="0" id="playerSlot0">
+                        <div class="player-info">
+                            <div class="player-name">-</div>
+                            <div class="player-chips">-</div>
+                        </div>
+                        <div class="player-cards">
+                            <div class="card-slot empty"></div>
+                            <div class="card-slot empty"></div>
+                        </div>
+                        <div class="player-bet">베팅: 0P</div>
+                        <div class="player-status">-</div>
+                    </div>
+                    <div class="player-slot" data-seat="1" id="playerSlot1">
+                        <div class="player-info">
+                            <div class="player-name">-</div>
+                            <div class="player-chips">-</div>
+                        </div>
+                        <div class="player-cards">
+                            <div class="card-slot empty"></div>
+                            <div class="card-slot empty"></div>
+                        </div>
+                        <div class="player-bet">베팅: 0P</div>
+                        <div class="player-status">-</div>
+                    </div>
+                    <div class="player-slot" data-seat="2" id="playerSlot2">
+                        <div class="player-info">
+                            <div class="player-name">-</div>
+                            <div class="player-chips">-</div>
+                        </div>
+                        <div class="player-cards">
+                            <div class="card-slot empty"></div>
+                            <div class="card-slot empty"></div>
+                        </div>
+                        <div class="player-bet">베팅: 0P</div>
+                        <div class="player-status">-</div>
+                    </div>
+                    <div class="player-slot" data-seat="3" id="playerSlot3">
+                        <div class="player-info">
+                            <div class="player-name">-</div>
+                            <div class="player-chips">-</div>
+                        </div>
+                        <div class="player-cards">
+                            <div class="card-slot empty"></div>
+                            <div class="card-slot empty"></div>
+                        </div>
+                        <div class="player-bet">베팅: 0P</div>
+                        <div class="player-status">-</div>
+                    </div>
+                    <div class="player-slot" data-seat="4" id="playerSlot4">
+                        <div class="player-info">
+                            <div class="player-name">-</div>
+                            <div class="player-chips">-</div>
+                        </div>
+                        <div class="player-cards">
+                            <div class="card-slot empty"></div>
+                            <div class="card-slot empty"></div>
+                        </div>
+                        <div class="player-bet">베팅: 0P</div>
+                        <div class="player-status">-</div>
+                    </div>
+                    <div class="player-slot" data-seat="5" id="playerSlot5">
+                        <div class="player-info">
+                            <div class="player-name">-</div>
+                            <div class="player-chips">-</div>
+                        </div>
+                        <div class="player-cards">
+                            <div class="card-slot empty"></div>
+                            <div class="card-slot empty"></div>
+                        </div>
+                        <div class="player-bet">베팅: 0P</div>
+                        <div class="player-status">-</div>
+                    </div>
+                </div>
+
+                <!-- 내 플레이어 영역 (하단) -->
+                <div class="my-player-area">
+                    <div class="my-cards">
+                        <div class="card-slot empty" id="myCard1"></div>
+                        <div class="card-slot empty" id="myCard2"></div>
+                    </div>
+                    <div class="my-info">
+                        <div class="my-name" id="myPlayerName">-</div>
+                        <div class="my-chips" id="myPlayerChips">-</div>
+                        <div class="my-bet" id="myPlayerBet">베팅: 0P</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 홀덤 컨트롤 패널 -->
+            <div class="holdem-controls-panel">
+                <div class="holdem-left-panel">
+                    <!-- 게임 정보 -->
+                    <div class="game-info-panel">
+                        <h4>게임 정보</h4>
+                        <div id="holdemGameInfo">
+                            <div>현재 라운드: <span id="currentRound">-</span></div>
+                            <div>블라인드: <span id="blindAmount">10/20P</span></div>
+                            <div>현재 베팅: <span id="currentBet">0P</span></div>
+                            <div>최소 레이즈: <span id="minRaise">20P</span></div>
+                        </div>
+                    </div>
+
+                    <!-- 액션 버튼 -->
+                    <div class="holdem-actions" id="holdemActions" style="display: none;">
+                        <button id="holdemFoldBtn" class="btn fold-btn">폴드</button>
+                        <button id="holdemCallBtn" class="btn call-btn">콜</button>
+                        <button id="holdemRaiseBtn" class="btn raise-btn">레이즈</button>
+                        <button id="holdemCheckBtn" class="btn check-btn">체크</button>
+                        <div class="raise-input-group" id="raiseInputGroup" style="display: none;">
+                            <input type="number" id="raiseAmount" min="0" value="0" class="raise-input">
+                            <button id="confirmRaiseBtn" class="btn confirm-btn">확인</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="holdem-right-panel">
+                    <!-- 학습 포인트 -->
+                    <div class="betting-chips">
+                        <h4>학습 포인트</h4>
+                        <div class="chips-grid">
+                            <div class="holdem-chip" data-value="10">10P</div>
+                            <div class="holdem-chip" data-value="25">25P</div>
+                            <div class="holdem-chip" data-value="50">50P</div>
+                            <div class="holdem-chip" data-value="100">100P</div>
+                            <div class="holdem-chip" data-value="500">500P</div>
+                        </div>
+                    </div>
+
+                    <!-- 게임 컨트롤 -->
+                    <div class="game-controls">
+                        <button id="joinHoldemTableBtn" class="btn deal-btn">테이블 참가</button>
+                        <button id="leaveHoldemTableBtn" class="btn clear-btn" style="display: none;">테이블 떠나기</button>
+                    </div>
+
+                    <!-- 플레이어 목록 -->
+                    <div class="players-list">
+                        <h4>플레이어 목록</h4>
+                        <div id="holdemPlayersList"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
+    <script src="js/firebase-config.js"></script>
+    <script src="js/auth.js"></script>
     <script src="js/game.js"></script>
+    <script src="js/holdem.js"></script>
 </body>
 </html>
