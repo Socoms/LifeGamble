@@ -71,23 +71,39 @@ class HoldemGame {
             
             // 기존 게임 찾기 또는 새 게임 생성
             const gamesRef = db.collection('holdemGames');
-            // 'waiting' 게임 중 자리(6석) 여유가 있는 게임을 찾는다.
-            // Firestore 인덱스 문제를 피하기 위해 orderBy 없이 조회 후 정렬한다.
-            const waitingGamesSnap = await gamesRef
-                .where('status', '==', 'waiting')
-                .limit(10)
+            // Firestore 인덱스 문제를 완전히 피하기 위해 모든 게임을 가져온 후 클라이언트에서 필터링
+            // 실제 운영 환경에서는 인덱스를 생성하거나 다른 방법을 사용하는 것이 좋습니다.
+            const allGamesSnap = await gamesRef
+                .limit(20) // 최근 20개 게임만 조회
                 .get();
             
+            // 클라이언트에서 'waiting' 상태이고 자리가 있는 게임 찾기
             let targetGameDoc = null;
             let latestCreatedAt = null;
-            waitingGamesSnap.forEach(doc => {
+            
+            allGamesSnap.forEach(doc => {
                 const data = doc.data() || {};
-                const playerCount = (data.players || []).length;
-                const createdAt = data.createdAt ? data.createdAt.toMillis ? data.createdAt.toMillis() : data.createdAt : 0;
-                if (playerCount < 6) {
-                    if (!targetGameDoc || createdAt > (latestCreatedAt || 0)) {
-                        targetGameDoc = doc;
-                        latestCreatedAt = createdAt;
+                // status가 'waiting'이고 플레이어가 6명 미만인 게임 찾기
+                if (data.status === 'waiting') {
+                    const playerCount = (data.players || []).length;
+                    if (playerCount < 6) {
+                        // createdAt 처리 (Timestamp 객체 또는 숫자)
+                        let createdAt = 0;
+                        if (data.createdAt) {
+                            if (data.createdAt.toMillis) {
+                                createdAt = data.createdAt.toMillis();
+                            } else if (data.createdAt.seconds) {
+                                createdAt = data.createdAt.seconds * 1000;
+                            } else if (typeof data.createdAt === 'number') {
+                                createdAt = data.createdAt;
+                            }
+                        }
+                        
+                        // 가장 최근에 생성된 게임 선택
+                        if (!targetGameDoc || createdAt > (latestCreatedAt || 0)) {
+                            targetGameDoc = doc;
+                            latestCreatedAt = createdAt;
+                        }
                     }
                 }
             });
