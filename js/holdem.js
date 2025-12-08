@@ -71,19 +71,24 @@ class HoldemGame {
             
             // 기존 게임 찾기 또는 새 게임 생성
             const gamesRef = db.collection('holdemGames');
-            // 가장 최근에 만들어진 'waiting' 게임 중 자리(6석) 여유가 있는 게임을 찾는다.
+            // 'waiting' 게임 중 자리(6석) 여유가 있는 게임을 찾는다.
+            // Firestore 인덱스 문제를 피하기 위해 orderBy 없이 조회 후 정렬한다.
             const waitingGamesSnap = await gamesRef
                 .where('status', '==', 'waiting')
-                .orderBy('createdAt', 'desc')
-                .limit(5)
+                .limit(10)
                 .get();
             
             let targetGameDoc = null;
+            let latestCreatedAt = null;
             waitingGamesSnap.forEach(doc => {
                 const data = doc.data() || {};
                 const playerCount = (data.players || []).length;
-                if (playerCount < 6 && !targetGameDoc) {
-                    targetGameDoc = doc;
+                const createdAt = data.createdAt ? data.createdAt.toMillis ? data.createdAt.toMillis() : data.createdAt : 0;
+                if (playerCount < 6) {
+                    if (!targetGameDoc || createdAt > (latestCreatedAt || 0)) {
+                        targetGameDoc = doc;
+                        latestCreatedAt = createdAt;
+                    }
                 }
             });
             
@@ -161,7 +166,7 @@ class HoldemGame {
             document.getElementById('leaveHoldemTableBtn').style.display = 'block';
         } catch (error) {
             console.error('테이블 참가 오류:', error);
-            alert('테이블 참가에 실패했습니다.');
+            alert('테이블 참가에 실패했습니다. (오류: ' + (error?.message || '알 수 없음') + ')');
         }
     }
 
