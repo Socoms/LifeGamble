@@ -19,6 +19,11 @@ class HoldemGame {
         this.unsubscribe = null;
         this.isLeaving = false; // 중복 제거 방지
         this.boundHandleUnload = null;
+        this.countdownTimer = null;
+        this.isStarting = false;
+        this.locked = false;
+        this.countdownStart = null;
+        this.status = 'waiting';
         
         this.init();
     }
@@ -92,7 +97,7 @@ class HoldemGame {
             allGamesSnap.forEach(doc => {
                 const data = doc.data() || {};
                 // status가 'waiting'이고 플레이어가 6명 미만인 게임 찾기
-                if (data.status === 'waiting') {
+                if (data.status === 'waiting' || data.status === 'starting') {
                     const playerCount = (data.players || []).length;
                     if (playerCount < 6) {
                         // createdAt 처리 (Timestamp 객체 또는 숫자)
@@ -118,6 +123,11 @@ class HoldemGame {
             
             if (targetGameDoc) {
                 // 기존 게임에 참가
+                const data = targetGameDoc.data() || {};
+                if (data.locked) {
+                    alert('곧 게임이 시작됩니다. 잠시 후 참여해주세요.');
+                    return;
+                }
                 this.gameId = targetGameDoc.id;
                 this.gameRef = gamesRef.doc(this.gameId);
             } else {
@@ -126,6 +136,8 @@ class HoldemGame {
                 this.gameId = this.gameRef.id;
                 await this.gameRef.set({
                     status: 'waiting',
+                    locked: false,
+                    countdownStart: null,
                     players: [],
                     communityCards: [],
                     pot: 0,
@@ -142,13 +154,21 @@ class HoldemGame {
             // 기존 플레이어 정보 가져오기
             const gameData = await this.gameRef.get();
             const existingPlayers = gameData.exists ? (gameData.data().players || []) : [];
+            const countdownStart = gameData.exists ? gameData.data().countdownStart : null;
+            const locked = gameData.exists ? gameData.data().locked : false;
             
             // 이미 참가한 플레이어인지 확인
             const existingPlayerIndex = existingPlayers.findIndex(p => p.uid === user.uid);
             if (existingPlayerIndex !== -1) {
                 // 이미 참가한 경우
                 console.log('이미 테이블에 참가되어 있습니다.');
+                // 참가 상태면 타이머 표시를 위해 updateDisplay 호출
+                this.updateDisplay();
             } else {
+                if (locked) {
+                    alert('5초 남은 상태에서는 참가할 수 없습니다.');
+                    return;
+                }
                 // 빈 자리 찾기
                 const occupiedSeats = existingPlayers.map(p => p.seat).filter(seat => seat >= 0 && seat < 6);
                 let availableSeat = -1;
@@ -180,6 +200,15 @@ class HoldemGame {
 
                 await this.gameRef.update({
                     players: firebase.firestore.FieldValue.arrayUnion(player)
+                });
+            }
+
+            // 카운트다운 시작 설정 (없을 때만)
+            if (!countdownStart) {
+                await this.gameRef.update({
+                    countdownStart: firebase.firestore.FieldValue.serverTimestamp(),
+                    status: 'starting',
+                    locked: false
                 });
             }
 
@@ -250,7 +279,15 @@ class HoldemGame {
             try {
                 const gameData = await this.gameRef.get();
                 if (gameData.exists) {
-                    const players = gameData.data().players || [];
+                    const data = gameData.data();
+                    if (data.locked && (data.status === 'starting' || data.status === 'waiting')) {
+                        if (!options.silent) {
+                            alert('게임 시작 5초 전에는 테이블을 떠날 수 없습니다.');
+                        }
+                        this.isLeaving = false;
+                        return;
+                    }
+                    const players = data.players || [];
                     const updatedPlayers = players.filter(p => p.uid !== window.authManager.currentUser.uid);
                     
                     if (updatedPlayers.length === 0) {
@@ -289,6 +326,9 @@ class HoldemGame {
         this.currentRound = gameData.currentRound || 'waiting';
         this.dealerPosition = gameData.dealerPosition || 0;
         this.currentPlayerIndex = gameData.currentPlayerIndex || 0;
+        this.locked = gameData.locked || false;
+        this.countdownStart = gameData.countdownStart || null;
+        this.status = gameData.status || 'waiting';
 
         // seat이 할당되지 않은 플레이어에게 자동 할당
         const needsUpdate = await this.assignSeatsToPlayers();
@@ -308,6 +348,9 @@ class HoldemGame {
         }
 
         this.updateDisplay();
+
+        // 카운트다운 처리 및 자동 시작
+        this.handleCountdownAndAutostart();
     }
 
     async assignSeatsToPlayers() {
@@ -478,43 +521,130 @@ class HoldemGame {
 
         // 플레이어 목록 업데이트
         this.updatePlayersList();
-        
-        // 게임 시작 버튼 표시/숨김
-        this.updateStartGameButton();
-    }
-    
-    updateStartGameButton() {
+
+        // 게임 시작 버튼은 사용하지 않음 (자동 시작)
         const startBtn = document.getElementById('startHoldemGameBtn');
-        if (!startBtn) return;
-        
-        const activePlayers = this.players.filter(p => p.status === 'active' || !p.status);
-        const canStart = this.currentRound === 'waiting' && activePlayers.length >= 2;
-        const isMyPlayer = this.players.some(p => p.uid === window.authManager?.currentUser?.uid);
-        
-        if (canStart && isMyPlayer) {
-            startBtn.style.display = 'block';
-        } else {
-            startBtn.style.display = 'none';
+        if (startBtn) startBtn.style.display = 'none';
+    }
+
+    handleCountdownAndAutostart() {
+        const timerEl = document.getElementById('holdemGameTimer');
+        const phaseEl = document.getElementById('holdemGamePhaseText');
+
+        if (!this.countdownStart || (this.status !== 'waiting' && this.status !== 'starting')) {
+            if (timerEl) timerEl.textContent = '-';
+            if (phaseEl) phaseEl.textContent = this.getRoundName(this.currentRound || 'waiting');
+            this.stopCountdownTicker();
+            return;
+        }
+
+        const startMillis = this.countdownStart.toMillis ? this.countdownStart.toMillis() :
+            this.countdownStart.seconds ? this.countdownStart.seconds * 1000 :
+            Number(this.countdownStart) || Date.now();
+
+        this.startCountdownTicker(startMillis);
+    }
+
+    startCountdownTicker(startMillis) {
+        const timerEl = document.getElementById('holdemGameTimer');
+        const phaseEl = document.getElementById('holdemGamePhaseText');
+
+        // 초기 표시
+        this.updateCountdownDisplay(startMillis, timerEl, phaseEl);
+
+        if (this.countdownTimer) {
+            clearInterval(this.countdownTimer);
+        }
+        this.countdownTimer = setInterval(() => {
+            const keepRunning = this.updateCountdownDisplay(startMillis, timerEl, phaseEl);
+            if (!keepRunning) {
+                this.stopCountdownTicker();
+            }
+        }, 1000);
+    }
+
+    updateCountdownDisplay(startMillis, timerEl, phaseEl) {
+        const elapsed = (Date.now() - startMillis) / 1000;
+        let remaining = Math.max(0, 30 - Math.floor(elapsed));
+
+        if (timerEl) timerEl.textContent = `${remaining}s`;
+        if (phaseEl) phaseEl.textContent = `게임 시작까지 ${remaining}s`;
+
+        // 5초 이하에서는 참가/퇴장 불가
+        if (remaining <= 5 && !this.locked && this.gameRef) {
+            this.locked = true;
+            this.gameRef.update({ locked: true }).catch(() => {});
+        }
+
+        // 카운트다운 종료 시 자동 시작
+        if (remaining <= 0 && !this.isStarting) {
+            this.startGame(true);
+            return false;
+        }
+        return true;
+    }
+
+    stopCountdownTicker() {
+        if (this.countdownTimer) {
+            clearInterval(this.countdownTimer);
+            this.countdownTimer = null;
         }
     }
     
-    async startGame() {
+    handleCountdownAndAutostart() {
+        const timerEl = document.getElementById('holdemGameTimer');
+        const phaseEl = document.getElementById('holdemGamePhaseText');
+
+        if (!this.countdownStart || (this.status !== 'waiting' && this.status !== 'starting')) {
+            if (timerEl) timerEl.textContent = '-';
+            if (phaseEl) phaseEl.textContent = this.getRoundName(this.currentRound || 'waiting');
+            return;
+        }
+
+        const startMillis = this.countdownStart.toMillis ? this.countdownStart.toMillis() :
+            this.countdownStart.seconds ? this.countdownStart.seconds * 1000 :
+            Number(this.countdownStart) || Date.now();
+
+        const elapsed = (Date.now() - startMillis) / 1000;
+        let remaining = Math.max(0, 30 - Math.floor(elapsed));
+
+        if (timerEl) timerEl.textContent = `${remaining}s`;
+        if (phaseEl) phaseEl.textContent = `게임 시작까지 ${remaining}s`;
+
+        // 5초 이하에서는 참가/퇴장 불가
+        if (remaining <= 5 && !this.locked && this.gameRef) {
+            this.locked = true;
+            this.gameRef.update({ locked: true }).catch(() => {});
+        }
+
+        // 카운트다운 종료 시 자동 시작
+        if (remaining <= 0 && !this.isStarting) {
+            this.startGame(true);
+        }
+    }
+    
+    async startGame(autoStart = false) {
         if (!this.gameRef) return;
+        if (this.isStarting) return;
         
         try {
+            this.isStarting = true;
             const gameData = await this.gameRef.get();
             if (!gameData.exists) return;
             
-            const players = gameData.data().players || [];
+            const data = gameData.data();
+            const players = data.players || [];
             const activePlayers = players.filter(p => p.status === 'active' || !p.status);
             
             if (activePlayers.length < 2) {
-                alert('게임을 시작하려면 최소 2명의 플레이어가 필요합니다.');
+                if (!autoStart) alert('게임을 시작하려면 최소 2명의 플레이어가 필요합니다.');
+                this.isStarting = false;
                 return;
             }
             
-            if (this.currentRound !== 'waiting') {
-                alert('이미 게임이 진행 중입니다.');
+            if (data.currentRound && data.currentRound !== 'waiting') {
+                if (!autoStart) alert('이미 게임이 진행 중입니다.');
+                this.isStarting = false;
                 return;
             }
             
@@ -553,6 +683,8 @@ class HoldemGame {
             // 게임 상태 업데이트
             await this.gameRef.update({
                 status: 'playing',
+                locked: false,
+                countdownStart: null,
                 currentRound: 'preflop',
                 players: activePlayers,
                 pot: pot,
@@ -567,6 +699,8 @@ class HoldemGame {
         } catch (error) {
             console.error('게임 시작 오류:', error);
             alert('게임 시작에 실패했습니다.');
+        } finally {
+            this.isStarting = false;
         }
     }
 
@@ -958,6 +1092,10 @@ class HoldemGame {
         this.mySeat = -1;
         this.myCards = [];
         this.gameRef = null;
+        this.locked = false;
+        this.countdownStart = null;
+        this.status = 'waiting';
+        this.stopCountdownTicker();
     }
 }
 
