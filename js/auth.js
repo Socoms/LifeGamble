@@ -278,6 +278,9 @@ class AuthManager {
         if (!gameStats.hilo) {
             gameStats.hilo = { totalGames: 0, wins: 0, losses: 0, ties: 0, totalPoints: 1000 };
         }
+        if (!gameStats.roulette) {
+            gameStats.roulette = { totalGames: 0, wins: 0, losses: 0, totalPoints: 1000 };
+        }
 
         // 게임 모드별 통계 업데이트
         if (gameMode === 'baccarat') {
@@ -304,6 +307,11 @@ class AuthManager {
             else if (stats.loss) gameStats.hilo.losses += 1;
             else if (stats.tie) gameStats.hilo.ties += 1;
             gameStats.hilo.totalPoints = points;
+        } else if (gameMode === 'roulette') {
+            gameStats.roulette.totalGames += 1;
+            if (stats.win) gameStats.roulette.wins += 1;
+            else if (stats.loss) gameStats.roulette.losses += 1;
+            gameStats.roulette.totalPoints = points;
         }
 
         // currentPoints는 모든 게임에서 공통으로 사용

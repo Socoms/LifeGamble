@@ -71,11 +71,25 @@ class HoldemGame {
             
             // 기존 게임 찾기 또는 새 게임 생성
             const gamesRef = db.collection('holdemGames');
-            const activeGames = await gamesRef.where('status', '==', 'waiting').limit(1).get();
+            // 가장 최근에 만들어진 'waiting' 게임 중 자리(6석) 여유가 있는 게임을 찾는다.
+            const waitingGamesSnap = await gamesRef
+                .where('status', '==', 'waiting')
+                .orderBy('createdAt', 'desc')
+                .limit(5)
+                .get();
             
-            if (!activeGames.empty) {
+            let targetGameDoc = null;
+            waitingGamesSnap.forEach(doc => {
+                const data = doc.data() || {};
+                const playerCount = (data.players || []).length;
+                if (playerCount < 6 && !targetGameDoc) {
+                    targetGameDoc = doc;
+                }
+            });
+            
+            if (targetGameDoc) {
                 // 기존 게임에 참가
-                this.gameId = activeGames.docs[0].id;
+                this.gameId = targetGameDoc.id;
                 this.gameRef = gamesRef.doc(this.gameId);
             } else {
                 // 새 게임 생성
