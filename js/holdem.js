@@ -197,6 +197,35 @@ class HoldemGame {
         await this.removePlayerFromGame();
 
         this.resetGame();
+        
+        // 화면 즉시 업데이트
+        this.updateDisplay();
+        
+        // 내 플레이어 정보 초기화
+        const myPlayerName = document.getElementById('myPlayerName');
+        const myPlayerChips = document.getElementById('myPlayerChips');
+        const myPlayerBet = document.getElementById('myPlayerBet');
+        if (myPlayerName) myPlayerName.textContent = '-';
+        if (myPlayerChips) myPlayerChips.textContent = '-';
+        if (myPlayerBet) myPlayerBet.textContent = '베팅: 0P';
+        
+        // 내 카드 초기화
+        const myCard1 = document.getElementById('myCard1');
+        const myCard2 = document.getElementById('myCard2');
+        if (myCard1) {
+            myCard1.classList.add('empty');
+            myCard1.innerHTML = '';
+        }
+        if (myCard2) {
+            myCard2.classList.add('empty');
+            myCard2.innerHTML = '';
+        }
+        
+        // 플레이어 목록 초기화
+        const playersList = document.getElementById('holdemPlayersList');
+        if (playersList) playersList.innerHTML = '';
+        
+        // 버튼 상태 변경
         document.getElementById('joinHoldemTableBtn').style.display = 'block';
         document.getElementById('leaveHoldemTableBtn').style.display = 'none';
     }
@@ -409,11 +438,31 @@ class HoldemGame {
 
         // 내 플레이어 정보 업데이트
         const myPlayer = this.players.find(p => p.uid === window.authManager?.currentUser?.uid);
+        const myPlayerName = document.getElementById('myPlayerName');
+        const myPlayerChips = document.getElementById('myPlayerChips');
+        const myPlayerBet = document.getElementById('myPlayerBet');
+        
         if (myPlayer) {
-            document.getElementById('myPlayerName').textContent = myPlayer.nickname;
-            document.getElementById('myPlayerChips').textContent = `${myPlayer.chips}P`;
-            document.getElementById('myPlayerBet').textContent = `베팅: ${myPlayer.bet}P`;
+            if (myPlayerName) myPlayerName.textContent = myPlayer.nickname;
+            if (myPlayerChips) myPlayerChips.textContent = `${myPlayer.chips}P`;
+            if (myPlayerBet) myPlayerBet.textContent = `베팅: ${myPlayer.bet}P`;
             this.updateMyCards();
+        } else {
+            // 내 플레이어가 없으면 초기화
+            if (myPlayerName) myPlayerName.textContent = '-';
+            if (myPlayerChips) myPlayerChips.textContent = '-';
+            if (myPlayerBet) myPlayerBet.textContent = '베팅: 0P';
+            // 내 카드도 초기화
+            const myCard1 = document.getElementById('myCard1');
+            const myCard2 = document.getElementById('myCard2');
+            if (myCard1) {
+                myCard1.classList.add('empty');
+                myCard1.innerHTML = '';
+            }
+            if (myCard2) {
+                myCard2.classList.add('empty');
+                myCard2.innerHTML = '';
+            }
         }
 
         // 게임 정보 업데이트
