@@ -48,6 +48,7 @@ class HoldemGame {
         document.getElementById('closeHoldemRules')?.addEventListener('click', () => this.hideRules());
         document.getElementById('joinHoldemTableBtn')?.addEventListener('click', () => this.joinTable());
         document.getElementById('leaveHoldemTableBtn')?.addEventListener('click', () => this.leaveTable());
+        document.getElementById('startHoldemGameBtn')?.addEventListener('click', () => this.startGame());
         document.getElementById('backToMenuBtnHoldem')?.addEventListener('click', () => this.backToMenu());
         
         // 액션 버튼들
@@ -228,6 +229,7 @@ class HoldemGame {
         // 버튼 상태 변경
         document.getElementById('joinHoldemTableBtn').style.display = 'block';
         document.getElementById('leaveHoldemTableBtn').style.display = 'none';
+        document.getElementById('startHoldemGameBtn').style.display = 'none';
     }
 
     async handleUnload() {
@@ -476,6 +478,96 @@ class HoldemGame {
 
         // 플레이어 목록 업데이트
         this.updatePlayersList();
+        
+        // 게임 시작 버튼 표시/숨김
+        this.updateStartGameButton();
+    }
+    
+    updateStartGameButton() {
+        const startBtn = document.getElementById('startHoldemGameBtn');
+        if (!startBtn) return;
+        
+        const activePlayers = this.players.filter(p => p.status === 'active' || !p.status);
+        const canStart = this.currentRound === 'waiting' && activePlayers.length >= 2;
+        const isMyPlayer = this.players.some(p => p.uid === window.authManager?.currentUser?.uid);
+        
+        if (canStart && isMyPlayer) {
+            startBtn.style.display = 'block';
+        } else {
+            startBtn.style.display = 'none';
+        }
+    }
+    
+    async startGame() {
+        if (!this.gameRef) return;
+        
+        try {
+            const gameData = await this.gameRef.get();
+            if (!gameData.exists) return;
+            
+            const players = gameData.data().players || [];
+            const activePlayers = players.filter(p => p.status === 'active' || !p.status);
+            
+            if (activePlayers.length < 2) {
+                alert('게임을 시작하려면 최소 2명의 플레이어가 필요합니다.');
+                return;
+            }
+            
+            if (this.currentRound !== 'waiting') {
+                alert('이미 게임이 진행 중입니다.');
+                return;
+            }
+            
+            // 딜러 위치 설정 (첫 번째 플레이어)
+            const dealerPosition = 0;
+            const smallBlindPosition = 1 % activePlayers.length;
+            const bigBlindPosition = 2 % activePlayers.length;
+            
+            // 블라인드 설정
+            activePlayers.forEach((player, index) => {
+                player.isDealer = index === dealerPosition;
+                player.isSmallBlind = index === smallBlindPosition;
+                player.isBigBlind = index === bigBlindPosition;
+                
+                // 블라인드 베팅
+                if (player.isSmallBlind) {
+                    const blindAmount = Math.min(this.smallBlind, player.chips);
+                    player.chips -= blindAmount;
+                    player.bet = blindAmount;
+                } else if (player.isBigBlind) {
+                    const blindAmount = Math.min(this.bigBlind, player.chips);
+                    player.chips -= blindAmount;
+                    player.bet = blindAmount;
+                } else {
+                    player.bet = 0;
+                }
+                
+                player.status = 'active';
+                player.cards = [];
+            });
+            
+            // 팟 계산
+            const pot = activePlayers.reduce((sum, p) => sum + p.bet, 0);
+            const currentBet = this.bigBlind;
+            
+            // 게임 상태 업데이트
+            await this.gameRef.update({
+                status: 'playing',
+                currentRound: 'preflop',
+                players: activePlayers,
+                pot: pot,
+                currentBet: currentBet,
+                dealerPosition: dealerPosition,
+                currentPlayerIndex: (bigBlindPosition + 1) % activePlayers.length
+            });
+            
+            // 카드 딜링
+            await this.dealCards();
+            
+        } catch (error) {
+            console.error('게임 시작 오류:', error);
+            alert('게임 시작에 실패했습니다.');
+        }
     }
 
     updateCommunityCards() {
@@ -792,8 +884,47 @@ class HoldemGame {
     }
 
     async dealCards() {
-        // 실제 카드 딜링 로직 구현 필요
-        console.log('카드 딜링 시작');
+        if (!this.gameRef) return;
+        
+        try {
+            const gameData = await this.gameRef.get();
+            if (!gameData.exists) return;
+            
+            const players = gameData.data().players || [];
+            const activePlayers = players.filter(p => p.status === 'active');
+            
+            // 덱 생성 및 섞기
+            const suits = ['S', 'H', 'D', 'C'];
+            const ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+            const deck = [];
+            
+            for (const suit of suits) {
+                for (const rank of ranks) {
+                    deck.push(`${rank}${suit}`);
+                }
+            }
+            
+            // 덱 섞기
+            for (let i = deck.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [deck[i], deck[j]] = [deck[j], deck[i]];
+            }
+            
+            // 각 플레이어에게 2장씩 카드 나누기
+            let deckIndex = 0;
+            activePlayers.forEach(player => {
+                player.cards = [deck[deckIndex++], deck[deckIndex++]];
+            });
+            
+            // Firestore에 업데이트
+            await this.gameRef.update({
+                players: players
+            });
+            
+            console.log('카드 딜링 완료');
+        } catch (error) {
+            console.error('카드 딜링 오류:', error);
+        }
     }
 
     selectChip(value) {
