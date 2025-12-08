@@ -2871,6 +2871,11 @@ h1 {
     animation: pulse-turn 1s infinite;
 }
 
+.player-slot.my-player {
+    border-color: #4CAF50;
+    box-shadow: 0 0 15px rgba(76, 175, 80, 0.5);
+}
+
 @keyframes pulse-turn {
     0%, 100% { box-shadow: 0 0 15px rgba(255, 107, 107, 0.5); }
     50% { box-shadow: 0 0 25px rgba(255, 107, 107, 0.8); }

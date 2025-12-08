@@ -66,6 +66,9 @@ class HoldemGame {
         }
 
         try {
+            const user = window.authManager.currentUser;
+            const userData = window.authManager.userData;
+            
             // 기존 게임 찾기 또는 새 게임 생성
             const gamesRef = db.collection('holdemGames');
             const activeGames = await gamesRef.where('status', '==', 'waiting').limit(1).get();
@@ -93,25 +96,49 @@ class HoldemGame {
                 });
             }
 
-            // 플레이어 추가
-            const user = window.authManager.currentUser;
-            const userData = window.authManager.userData;
-            const player = {
-                uid: user.uid,
-                nickname: userData?.nickname || user.email.split('@')[0],
-                seat: -1, // 자동 할당
-                chips: window.game ? window.game.money : 1000,
-                cards: [],
-                bet: 0,
-                status: 'active', // active, folded, allin
-                isDealer: false,
-                isSmallBlind: false,
-                isBigBlind: false
-            };
+            // 기존 플레이어 정보 가져오기
+            const gameData = await this.gameRef.get();
+            const existingPlayers = gameData.exists ? (gameData.data().players || []) : [];
+            
+            // 이미 참가한 플레이어인지 확인
+            const existingPlayerIndex = existingPlayers.findIndex(p => p.uid === user.uid);
+            if (existingPlayerIndex !== -1) {
+                // 이미 참가한 경우
+                console.log('이미 테이블에 참가되어 있습니다.');
+            } else {
+                // 빈 자리 찾기
+                const occupiedSeats = existingPlayers.map(p => p.seat).filter(seat => seat >= 0 && seat < 6);
+                let availableSeat = -1;
+                for (let i = 0; i < 6; i++) {
+                    if (!occupiedSeats.includes(i)) {
+                        availableSeat = i;
+                        break;
+                    }
+                }
+                
+                if (availableSeat === -1) {
+                    alert('테이블이 가득 찼습니다.');
+                    return;
+                }
+                
+                // 플레이어 추가
+                const player = {
+                    uid: user.uid,
+                    nickname: userData?.nickname || user.email.split('@')[0],
+                    seat: availableSeat,
+                    chips: window.game ? window.game.money : 1000,
+                    cards: [],
+                    bet: 0,
+                    status: 'active', // active, folded, allin
+                    isDealer: false,
+                    isSmallBlind: false,
+                    isBigBlind: false
+                };
 
-            await this.gameRef.update({
-                players: firebase.firestore.FieldValue.arrayUnion(player)
-            });
+                await this.gameRef.update({
+                    players: firebase.firestore.FieldValue.arrayUnion(player)
+                });
+            }
 
             // 실시간 리스너 설정
             this.setupRealtimeListener();
@@ -157,15 +184,15 @@ class HoldemGame {
     setupRealtimeListener() {
         if (!this.gameRef) return;
 
-        this.unsubscribe = this.gameRef.onSnapshot((snapshot) => {
+        this.unsubscribe = this.gameRef.onSnapshot(async (snapshot) => {
             if (!snapshot.exists) return;
 
             const gameData = snapshot.data();
-            this.updateGameState(gameData);
+            await this.updateGameState(gameData);
         });
     }
 
-    updateGameState(gameData) {
+    async updateGameState(gameData) {
         this.players = gameData.players || [];
         this.communityCards = gameData.communityCards || [];
         this.pot = gameData.pot || 0;
@@ -173,6 +200,16 @@ class HoldemGame {
         this.currentRound = gameData.currentRound || 'waiting';
         this.dealerPosition = gameData.dealerPosition || 0;
         this.currentPlayerIndex = gameData.currentPlayerIndex || 0;
+
+        // seat이 할당되지 않은 플레이어에게 자동 할당
+        const needsUpdate = await this.assignSeatsToPlayers();
+        if (needsUpdate && this.gameRef) {
+            // 업데이트가 필요한 경우 다시 가져오기
+            const updatedData = await this.gameRef.get();
+            if (updatedData.exists) {
+                this.players = updatedData.data().players || [];
+            }
+        }
 
         // 내 플레이어 찾기
         const myPlayer = this.players.find(p => p.uid === window.authManager?.currentUser?.uid);
@@ -184,19 +221,106 @@ class HoldemGame {
         this.updateDisplay();
     }
 
+    async assignSeatsToPlayers() {
+        if (!this.gameRef) return false;
+        
+        let needsUpdate = false;
+        const occupiedSeats = this.players.filter(p => p.seat >= 0 && p.seat < 6).map(p => p.seat);
+        const playersWithoutSeat = this.players.filter(p => p.seat === -1 || p.seat === undefined);
+        
+        if (playersWithoutSeat.length === 0) return false;
+        
+        const updatedPlayers = [...this.players];
+        
+        for (const player of playersWithoutSeat) {
+            // 빈 자리 찾기
+            for (let i = 0; i < 6; i++) {
+                if (!occupiedSeats.includes(i)) {
+                    const playerIndex = updatedPlayers.findIndex(p => p.uid === player.uid);
+                    if (playerIndex !== -1) {
+                        updatedPlayers[playerIndex].seat = i;
+                        occupiedSeats.push(i);
+                        needsUpdate = true;
+                        break;
+                    }
+                }
+            }
+        }
+        
+        if (needsUpdate) {
+            try {
+                await this.gameRef.update({ players: updatedPlayers });
+                return true;
+            } catch (error) {
+                console.error('Seat 할당 오류:', error);
+                return false;
+            }
+        }
+        
+        return false;
+    }
+
     updateDisplay() {
         // 플레이어 슬롯 업데이트
         for (let i = 0; i < 6; i++) {
             const slot = document.getElementById(`playerSlot${i}`);
+            if (!slot) continue;
+            
             const player = this.players.find(p => p.seat === i);
             
             if (player) {
                 slot.classList.remove('empty');
-                slot.querySelector('.player-name').textContent = player.nickname;
-                slot.querySelector('.player-chips').textContent = `${player.chips}P`;
-                slot.querySelector('.player-bet').textContent = `베팅: ${player.bet}P`;
-                slot.querySelector('.player-status').textContent = player.status === 'folded' ? '폴드' : 
-                                                                   player.status === 'allin' ? '올인' : '';
+                const nameEl = slot.querySelector('.player-name');
+                const chipsEl = slot.querySelector('.player-chips');
+                const betEl = slot.querySelector('.player-bet');
+                const statusEl = slot.querySelector('.player-status');
+                const cardsContainer = slot.querySelector('.player-cards');
+                
+                if (nameEl) nameEl.textContent = player.nickname;
+                if (chipsEl) chipsEl.textContent = `${player.chips}P`;
+                if (betEl) betEl.textContent = `베팅: ${player.bet}P`;
+                if (statusEl) {
+                    statusEl.textContent = player.status === 'folded' ? '폴드' : 
+                                          player.status === 'allin' ? '올인' : 
+                                          player.status === 'active' ? '참가 중' : '';
+                }
+                
+                // 플레이어 카드 표시 (내 카드가 아니면 뒷면 표시)
+                if (cardsContainer) {
+                    const cardSlots = cardsContainer.querySelectorAll('.card-slot');
+                    const isMyPlayer = player.uid === window.authManager?.currentUser?.uid;
+                    
+                    if (player.cards && player.cards.length > 0) {
+                        cardSlots.forEach((slot, idx) => {
+                            if (idx < player.cards.length) {
+                                slot.classList.remove('empty');
+                                if (isMyPlayer || this.currentRound === 'showdown') {
+                                    // 내 카드이거나 쇼다운이면 앞면 표시
+                                    slot.innerHTML = `<img src="${this.getCardImage(player.cards[idx])}" alt="${player.cards[idx]}">`;
+                                } else {
+                                    // 다른 플레이어 카드는 뒷면 표시
+                                    slot.innerHTML = '<div class="card-back">🂠</div>';
+                                }
+                            } else {
+                                slot.classList.add('empty');
+                                slot.innerHTML = '';
+                            }
+                        });
+                    } else {
+                        cardSlots.forEach(slot => {
+                            slot.classList.add('empty');
+                            slot.innerHTML = '';
+                        });
+                    }
+                }
+                
+                // 내 플레이어인지 확인
+                const isMyPlayer = player.uid === window.authManager?.currentUser?.uid;
+                if (isMyPlayer) {
+                    slot.classList.add('my-player');
+                } else {
+                    slot.classList.remove('my-player');
+                }
                 
                 // 내 차례 표시
                 if (this.currentPlayerIndex === i && this.currentRound !== 'waiting' && this.currentRound !== 'showdown') {
@@ -206,10 +330,16 @@ class HoldemGame {
                 }
             } else {
                 slot.classList.add('empty');
-                slot.querySelector('.player-name').textContent = '-';
-                slot.querySelector('.player-chips').textContent = '-';
-                slot.querySelector('.player-bet').textContent = '베팅: 0P';
-                slot.querySelector('.player-status').textContent = '-';
+                slot.classList.remove('my-turn', 'my-player');
+                const nameEl = slot.querySelector('.player-name');
+                const chipsEl = slot.querySelector('.player-chips');
+                const betEl = slot.querySelector('.player-bet');
+                const statusEl = slot.querySelector('.player-status');
+                
+                if (nameEl) nameEl.textContent = '-';
+                if (chipsEl) chipsEl.textContent = '-';
+                if (betEl) betEl.textContent = '베팅: 0P';
+                if (statusEl) statusEl.textContent = '-';
             }
         }
 
@@ -599,5 +729,6 @@ document.addEventListener('DOMContentLoaded', () => {
     holdemGame = new HoldemGame();
     window.holdemGame = holdemGame;
 });
+
 
 
