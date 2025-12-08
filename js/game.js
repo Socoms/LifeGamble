@@ -62,6 +62,14 @@ class RoyalCasino {
     }
 
     setupEventListeners() {
+        // 모드 탭 전환
+        document.querySelectorAll('.mode-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                const tabType = tab.dataset.tab;
+                this.switchModeTab(tabType);
+            });
+        });
+        
         // 게임 모드 선택
         document.querySelectorAll('.mode-card').forEach(card => {
             card.addEventListener('click', () => {
@@ -150,6 +158,8 @@ class RoyalCasino {
                 this.saveGameData('hilo', { win: false, loss: false, tie: false });
             } else if (currentMode === 'holdem') {
                 // 홀덤은 멀티플레이어이므로 별도 처리
+            } else if (currentMode === 'roulette') {
+                this.saveGameData('roulette', { win: false, loss: false });
             }
         }
         
@@ -209,6 +219,15 @@ class RoyalCasino {
                 holdemArea.style.opacity = '1';
                 console.log('홀덤 게임 영역 표시:', holdemArea.style.display);
             }
+        } else if (mode === 'roulette') {
+            this.setupRoulette();
+            const rouletteArea = document.getElementById('rouletteGameArea');
+            if (rouletteArea) {
+                rouletteArea.style.display = 'block';
+                rouletteArea.style.visibility = 'visible';
+                rouletteArea.style.opacity = '1';
+                console.log('룰렛 게임 영역 표시:', rouletteArea.style.display);
+            }
         }
         
         // 포인트는 유지되므로 업데이트만
@@ -219,6 +238,7 @@ class RoyalCasino {
         // 모든 게임 관련 영역 숨기기
         const gameAreas = [
             'game-area',
+            'rouletteGameArea',
             'baccaratGameArea', 
             'blackjackGameArea',
             'diceGameArea',
@@ -1455,6 +1475,84 @@ class RoyalCasino {
         return breakdown;
     }
 
+    // 칩 스택을 렌더링하는 공통 함수
+    renderChipStack(container, amount) {
+        if (!container || amount <= 0) return;
+
+        // 배팅 금액을 칩 단위로 분해
+        const chipBreakdown = this.breakdownToChips(amount);
+        let zIndex = 100;
+        let stackOffset = 0;
+        
+        // 칩 스택 컨테이너 생성
+        const stackContainer = document.createElement('div');
+        stackContainer.style.cssText = `
+            position: relative;
+            display: flex;
+            flex-direction: column-reverse;
+            align-items: center;
+            height: 80px;
+            justify-content: flex-end;
+        `;
+        
+        let chipIndex = 0;
+        chipBreakdown.forEach((chipInfo) => {
+            for (let i = 0; i < chipInfo.count; i++) {
+                const chip = document.createElement('div');
+                chip.className = 'bet-chip-stack';
+                chip.textContent = `${chipInfo.value}P`;
+                
+                const rotation = Math.random() * 10 - 5;
+                
+                chip.style.cssText = `
+                    width: 50px;
+                    height: 12px;
+                    border-radius: 50%;
+                    background: ${this.getChipColor(chipInfo.value)};
+                    color: white;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 0.9em;
+                    font-weight: bold;
+                    box-shadow: 0 3px 6px rgba(0,0,0,0.4);
+                    border: 2px solid #d4af37;
+                    position: absolute;
+                    bottom: ${stackOffset}px;
+                    z-index: ${zIndex--};
+                    transform: rotate(${rotation}deg);
+                    animation-delay: ${chipIndex * 0.1}s;
+                `;
+                
+                chip.title = `${chipInfo.value}P 칩`;
+                stackContainer.appendChild(chip);
+                stackOffset += 5;
+                chipIndex++;
+            }
+        });
+        
+        // 총 금액 표시 (맨 위)
+        const totalLabel = document.createElement('div');
+        totalLabel.className = 'total-amount-label';
+        totalLabel.textContent = `${amount}P`;
+        totalLabel.style.cssText = `
+            position: absolute;
+            top: -25px;
+            background: rgba(0,0,0,0.9);
+            color: #ffd700;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 1em;
+            font-weight: bold;
+            white-space: nowrap;
+            border: 1px solid #d4af37;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        `;
+        
+        stackContainer.appendChild(totalLabel);
+        container.appendChild(stackContainer);
+    }
+
     getChipColor(value) {
         switch(value) {
             case 1: return 'linear-gradient(45deg, #868e96, #6c757d)'; // 회색 - $1
@@ -2147,6 +2245,30 @@ class RoyalCasino {
         document.getElementById('gameRules').style.display = 'none';
     }
 
+    switchModeTab(tabType) {
+        // 모든 탭 비활성화
+        document.querySelectorAll('.mode-tab').forEach(tab => {
+            tab.classList.remove('active');
+        });
+        
+        // 모든 게임 목록 숨기기
+        document.querySelectorAll('.mode-games').forEach(games => {
+            games.classList.remove('active');
+        });
+        
+        // 선택한 탭 활성화
+        const selectedTab = document.querySelector(`.mode-tab[data-tab="${tabType}"]`);
+        if (selectedTab) {
+            selectedTab.classList.add('active');
+        }
+        
+        // 해당 탭의 게임 목록 표시
+        const gamesContainer = document.getElementById(`${tabType}ModeGames`);
+        if (gamesContainer) {
+            gamesContainer.classList.add('active');
+        }
+    }
+
     async backToMenu() {
         console.log('backToMenu 호출됨, 현재 모드:', this.selectedMode);
         // 타이머 정리
@@ -2288,6 +2410,12 @@ class RoyalCasino {
         this.diceAutoBet = false;
         this.diceAutoBetRemaining = 0;
         
+        // 배팅 칩 초기화
+        const smallerChipsContainer = document.getElementById('diceSmallerChips');
+        const largerChipsContainer = document.getElementById('diceLargerChips');
+        if (smallerChipsContainer) smallerChipsContainer.innerHTML = '';
+        if (largerChipsContainer) largerChipsContainer.innerHTML = '';
+        
         this.setupDiceEventListeners();
         this.updateDiceDisplay();
         this.updateDiceProbabilities();
@@ -2399,6 +2527,9 @@ class RoyalCasino {
 
         this.diceGamePhase = 'rolling';
         this.money -= this.diceBetAmount;
+        
+        // 배팅 칩 표시
+        this.displayDiceBetChips();
         this.updateDisplay();
         
         // 게임 시작 버튼 비활성화
@@ -2525,6 +2656,12 @@ class RoyalCasino {
             });
             rolledNumberEl.textContent = '00';
             
+            // 배팅 칩 제거
+            const smallerChipsContainer = document.getElementById('diceSmallerChips');
+            const largerChipsContainer = document.getElementById('diceLargerChips');
+            if (smallerChipsContainer) smallerChipsContainer.innerHTML = '';
+            if (largerChipsContainer) largerChipsContainer.innerHTML = '';
+            
             // 게임 시작 버튼 활성화
             const startBtn = document.getElementById('diceStartGameBtn');
             if (startBtn) startBtn.disabled = false;
@@ -2566,8 +2703,33 @@ class RoyalCasino {
             chip.classList.toggle('selected', parseInt(chip.dataset.value) === this.diceBetAmount);
         });
         
+        // 배팅 칩 표시 (배팅이 완료된 경우)
+        if (this.diceGamePhase === 'rolling' || this.diceGamePhase === 'result') {
+            this.displayDiceBetChips();
+        }
+        
         // 학습 포인트 실시간 업데이트
         this.updateDisplay();
+    }
+
+    displayDiceBetChips() {
+        // 더 작은 배팅 칩 표시
+        const smallerChipsContainer = document.getElementById('diceSmallerChips');
+        const largerChipsContainer = document.getElementById('diceLargerChips');
+        
+        if (smallerChipsContainer) {
+            smallerChipsContainer.innerHTML = '';
+            if (this.diceBetType === 'smaller' && this.diceBetAmount > 0) {
+                this.renderChipStack(smallerChipsContainer, this.diceBetAmount);
+            }
+        }
+        
+        if (largerChipsContainer) {
+            largerChipsContainer.innerHTML = '';
+            if (this.diceBetType === 'larger' && this.diceBetAmount > 0) {
+                this.renderChipStack(largerChipsContainer, this.diceBetAmount);
+            }
+        }
     }
 
     updateDiceProbabilities() {
@@ -2680,6 +2842,22 @@ class RoyalCasino {
         this.showMessage('🎴 테이블에 참가하여 게임을 시작하세요!');
     }
 
+    setupRoulette() {
+        console.log('룰렛 게임 설정 시작');
+        const currentGameEl = document.getElementById('currentGame');
+        if (currentGameEl) {
+            currentGameEl.textContent = '룰렛';
+        }
+        
+        // 룰렛 게임 초기화
+        if (!window.rouletteGame) {
+            window.rouletteGame = new RouletteGame();
+        }
+        window.rouletteGame.init();
+        
+        this.showMessage('🎰 배팅을 선택하고 스핀 버튼을 눌러주세요!');
+    }
+
     // ========== 하이로우 게임 메서드 ==========
     setupHilo() {
         console.log('하이로우 게임 설정 시작');
@@ -2695,6 +2873,12 @@ class RoyalCasino {
         this.hiloCurrentCard = null;
         this.hiloDrawnCards = [];
         this.hiloRemainingCards = 52;
+        
+        // 배팅 칩 초기화
+        const higherChipsContainer = document.getElementById('higherChips');
+        const lowerChipsContainer = document.getElementById('lowerChips');
+        if (higherChipsContainer) higherChipsContainer.innerHTML = '';
+        if (lowerChipsContainer) lowerChipsContainer.innerHTML = '';
         
         this.setupHiloEventListeners();
         this.updateHiloDisplay();
@@ -2935,6 +3119,13 @@ class RoyalCasino {
             this.hiloBets = { higher: 0, lower: 0 };
             this.hiloBetAmount = 0;
             this.hiloGamePhase = 'betting';
+            
+            // 배팅 칩 제거
+            const higherChipsContainer = document.getElementById('higherChips');
+            const lowerChipsContainer = document.getElementById('lowerChips');
+            if (higherChipsContainer) higherChipsContainer.innerHTML = '';
+            if (lowerChipsContainer) lowerChipsContainer.innerHTML = '';
+            
             this.updateHiloDisplay();
             this.updateHiloProbabilities();
             document.getElementById('drawNextCardBtn').style.display = 'none';
@@ -2999,17 +3190,32 @@ class RoyalCasino {
             currentCardDisplay.innerHTML = '<div class="card-placeholder">카드를 뽑아주세요</div>';
         }
         
-        // 배팅 표시
+        // 배팅 표시 (칩 스택으로)
         Object.keys(this.hiloBets).forEach(betType => {
             const chipsContainer = document.getElementById(`${betType}Chips`);
-            chipsContainer.innerHTML = '';
-            if (this.hiloBets[betType] > 0) {
-                const chip = document.createElement('div');
-                chip.className = 'bet-chip';
-                chip.textContent = `${this.hiloBets[betType]}P`;
-                chipsContainer.appendChild(chip);
+            if (chipsContainer) {
+                chipsContainer.innerHTML = '';
+                if (this.hiloBets[betType] > 0) {
+                    this.renderChipStack(chipsContainer, this.hiloBets[betType]);
+                }
             }
         });
+        
+        // 하이로우 배팅 칩 컨테이너 스타일 조정
+        const higherChipsContainer = document.getElementById('higherChips');
+        const lowerChipsContainer = document.getElementById('lowerChips');
+        if (higherChipsContainer) {
+            higherChipsContainer.style.position = 'static';
+            higherChipsContainer.style.width = '100%';
+            higherChipsContainer.style.height = 'auto';
+            higherChipsContainer.style.transform = 'none';
+        }
+        if (lowerChipsContainer) {
+            lowerChipsContainer.style.position = 'static';
+            lowerChipsContainer.style.width = '100%';
+            lowerChipsContainer.style.height = 'auto';
+            lowerChipsContainer.style.transform = 'none';
+        }
         
         // 학습 포인트 실시간 업데이트
         this.updateDisplay();
@@ -3037,6 +3243,13 @@ class RoyalCasino {
             this.money += this.hiloBetAmount;
             this.hiloBets = { higher: 0, lower: 0 };
             this.hiloBetAmount = 0;
+            
+            // 배팅 칩 제거
+            const higherChipsContainer = document.getElementById('higherChips');
+            const lowerChipsContainer = document.getElementById('lowerChips');
+            if (higherChipsContainer) higherChipsContainer.innerHTML = '';
+            if (lowerChipsContainer) lowerChipsContainer.innerHTML = '';
+            
             this.updateHiloDisplay();
             document.getElementById('drawNextCardBtn').style.display = 'none';
         }

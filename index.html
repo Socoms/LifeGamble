@@ -126,38 +126,62 @@
         <!-- 게임 모드 선택 -->
         <div id="modeSelection" class="mode-selection">
             <h3>🎮 게임 모드를 선택하세요</h3>
-            <div class="mode-grid">
-                <div class="mode-card" data-mode="baccarat">
-                    <div class="mode-icon">📈</div>
-                    <h4>바카라 확률 학습</h4>
-                    <p>확률 계산과 통계 분석<br>플레이어 vs 뱅커 승률 비교</p>
-                    <span class="difficulty">학습 난이도: ⭐⭐⭐⭐⭐</span>
+            
+            <!-- 모드 탭 -->
+            <div class="mode-tabs">
+                <button class="mode-tab active" data-tab="single">🎯 싱글 모드</button>
+                <button class="mode-tab" data-tab="multi">👥 멀티플레이 모드</button>
+            </div>
+            
+            <!-- 싱글 모드 게임 목록 -->
+            <div id="singleModeGames" class="mode-games active">
+                <div class="mode-grid">
+                    <div class="mode-card" data-mode="baccarat">
+                        <div class="mode-icon">📈</div>
+                        <h4>바카라 확률 학습</h4>
+                        <p>확률 계산과 통계 분석<br>플레이어 vs 뱅커 승률 비교</p>
+                        <span class="difficulty">학습 난이도: ⭐⭐⭐⭐⭐</span>
+                    </div>
+                    
+                    <div class="mode-card" data-mode="blackjack">
+                        <div class="mode-icon">🧮</div>
+                        <h4>블랙잭 전략 학습</h4>
+                        <p>최적 전략과 기대값 계산<br>수학적 의사결정 연습</p>
+                        <span class="difficulty">학습 난이도: ⭐⭐⭐⭐</span>
+                    </div>
+                    
+                    <div class="mode-card" data-mode="dice">
+                        <div class="mode-icon">🎲</div>
+                        <h4>다이스 확률 학습</h4>
+                        <p>주사위 조합 확률 분석<br>크랩스 전략 학습</p>
+                        <span class="difficulty">학습 난이도: ⭐⭐⭐</span>
+                    </div>
+                    
+                    <div class="mode-card" data-mode="hilo">
+                        <div class="mode-icon">🃏</div>
+                        <h4>하이로우 카드 학습</h4>
+                        <p>카드 높낮이 확률 계산<br>조건부 확률 이해</p>
+                        <span class="difficulty">학습 난이도: ⭐⭐⭐</span>
+                    </div>
+                    
+                    <div class="mode-card" data-mode="roulette">
+                        <div class="mode-icon">🎰</div>
+                        <h4>룰렛 확률 학습</h4>
+                        <p>유럽식 룰렛 게임<br>다양한 배팅 옵션과 확률 분석</p>
+                        <span class="difficulty">학습 난이도: ⭐⭐⭐⭐</span>
+                    </div>
                 </div>
-                
-                <div class="mode-card" data-mode="blackjack">
-                    <div class="mode-icon">🧮</div>
-                    <h4>블랙잭 전략 학습</h4>
-                    <p>최적 전략과 기대값 계산<br>수학적 의사결정 연습</p>
-                    <span class="difficulty">학습 난이도: ⭐⭐⭐⭐</span>
-                </div>
-                
-                <div class="mode-card" data-mode="dice">
-                    <div class="mode-icon">🎲</div>
-                    <h4>다이스 확률 학습</h4>
-                    <p>주사위 조합 확률 분석<br>크랩스 전략 학습</p>
-                    <span class="difficulty">학습 난이도: ⭐⭐⭐</span>
-                </div>
-                <div class="mode-card" data-mode="hilo">
-                    <div class="mode-icon">🃏</div>
-                    <h4>하이로우 카드 학습</h4>
-                    <p>카드 높낮이 확률 계산<br>조건부 확률 이해</p>
-                    <span class="difficulty">학습 난이도: ⭐⭐⭐</span>
-                </div>
-                <div class="mode-card" data-mode="holdem">
-                    <div class="mode-icon">🎴</div>
-                    <h4>텍사스 홀덤</h4>
-                    <p>멀티플레이어 포커 게임<br>최대 6인 동시 플레이</p>
-                    <span class="difficulty">학습 난이도: ⭐⭐⭐⭐⭐</span>
+            </div>
+            
+            <!-- 멀티플레이 모드 게임 목록 -->
+            <div id="multiModeGames" class="mode-games">
+                <div class="mode-grid">
+                    <div class="mode-card" data-mode="holdem">
+                        <div class="mode-icon">🎴</div>
+                        <h4>텍사스 홀덤</h4>
+                        <p>멀티플레이어 포커 게임<br>최대 6인 동시 플레이</p>
+                        <span class="difficulty">학습 난이도: ⭐⭐⭐⭐⭐</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -316,6 +340,42 @@
                     </ul>
                 </div>
                 <button id="closeHiloRules" class="btn close-rules">확인</button>
+            </div>
+        </div>
+
+        <!-- 룰렛 게임 규칙 모달 -->
+        <div id="rouletteRulesModal" class="game-rules" style="display: none;">
+            <div class="rules-content" style="max-width: 700px;">
+                <h4>🎰 룰렛 게임 규칙</h4>
+                <div id="rouletteRulesText" style="color: #fff; line-height: 1.8;">
+                    <h5 style="color: #ffd93d; margin-top: 15px;">게임 개요</h5>
+                    <ul>
+                        <li>유럽식 룰렛은 0부터 36까지 총 37개의 숫자가 있습니다</li>
+                        <li>0은 녹색, 나머지 숫자는 빨강 또는 검정으로 구분됩니다</li>
+                        <li>공을 돌리고 어느 숫자에 떨어지는지 예측하여 배팅합니다</li>
+                    </ul>
+                    <h5 style="color: #ffd93d; margin-top: 15px;">배팅 옵션</h5>
+                    <ul>
+                        <li><strong>직접 배팅:</strong> 특정 숫자에 배팅 (배당 35:1)</li>
+                        <li><strong>분할 배팅:</strong> 인접한 2개 숫자 (배당 17:1)</li>
+                        <li><strong>거리 배팅:</strong> 3개 숫자 (배당 11:1)</li>
+                        <li><strong>코너 배팅:</strong> 4개 숫자 (배당 8:1)</li>
+                        <li><strong>라인 배팅:</strong> 6개 숫자 (배당 5:1)</li>
+                        <li><strong>더즌:</strong> 12개 숫자 (배당 2:1)</li>
+                        <li><strong>컬럼:</strong> 12개 숫자 (배당 2:1)</li>
+                        <li><strong>1-18 / 19-36:</strong> 하이/로우 (배당 1:1)</li>
+                        <li><strong>홀수 / 짝수:</strong> (배당 1:1)</li>
+                        <li><strong>빨강 / 검정:</strong> (배당 1:1)</li>
+                    </ul>
+                    <h5 style="color: #ffd93d; margin-top: 15px;">확률 및 기대값</h5>
+                    <ul>
+                        <li>직접 배팅 승률: 1/37 (2.70%), 기대값: -2.70%</li>
+                        <li>홀/짝, 빨강/검정 승률: 18/37 (48.65%), 기대값: -2.70%</li>
+                        <li>더즌/컬럼 승률: 12/37 (32.43%), 기대값: -2.70%</li>
+                        <li>모든 배팅의 하우스 엣지는 동일하게 2.70%입니다</li>
+                    </ul>
+                </div>
+                <button id="closeRouletteRules" class="btn close-rules">확인</button>
             </div>
         </div>
 
@@ -660,12 +720,18 @@
 
                     <!-- 배팅 옵션 -->
                     <div class="dice-bet-options">
-                        <button id="diceBetSmaller" class="dice-bet-btn smaller-btn">
-                            <span>✓</span> 더 작은
-                        </button>
-                        <button id="diceBetLarger" class="dice-bet-btn larger-btn">
-                            <span>▲</span> 더 큰
-                        </button>
+                        <div class="dice-bet-option-wrapper">
+                            <button id="diceBetSmaller" class="dice-bet-btn smaller-btn">
+                                <span>✓</span> 더 작은
+                            </button>
+                            <div class="bet-chips-container" id="diceSmallerChips"></div>
+                        </div>
+                        <div class="dice-bet-option-wrapper">
+                            <button id="diceBetLarger" class="dice-bet-btn larger-btn">
+                                <span>▲</span> 더 큰
+                            </button>
+                            <div class="bet-chips-container" id="diceLargerChips"></div>
+                        </div>
                     </div>
 
                     <!-- 게임 시작 버튼 -->
@@ -1039,11 +1105,132 @@
                 </div>
             </div>
         </div>
+
+        <!-- 룰렛 게임 영역 -->
+        <div id="rouletteGameArea" class="card-game-area" style="display: none;">
+            <!-- 룰렛 헤더 -->
+            <div class="roulette-header">
+                <div class="game-info">
+                    <h2>🎰 룰렛 확률 학습</h2>
+                    <div class="game-status">
+                        <span id="rouletteGamePhaseText">배팅 시간</span>
+                        <div id="rouletteGameTimer" class="timer">-</div>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button id="showRouletteRulesBtn" class="btn rules-btn">📖 게임 규칙</button>
+                    <button id="backToMenuBtnRoulette" class="btn back-btn">🏠 메뉴로 돌아가기</button>
+                </div>
+            </div>
+
+            <!-- 룰렛 테이블 -->
+            <div class="roulette-table">
+                <!-- 룰렛 휠 영역 -->
+                <div class="roulette-wheel-area">
+                    <div class="wheel-container">
+                        <div id="rouletteWheel" class="roulette-wheel">
+                            <!-- 룰렛 휠은 JavaScript로 동적 생성 -->
+                        </div>
+                        <div id="rouletteBall" class="roulette-ball"></div>
+                        <div id="winningNumber" class="winning-number-display">-</div>
+                    </div>
+                </div>
+
+                <!-- 배팅 테이블 영역 -->
+                <div class="roulette-betting-area">
+                    <!-- 메인 배팅 테이블 -->
+                    <div class="main-betting-table">
+                        <!-- 숫자 배팅 그리드 -->
+                        <div class="number-grid">
+                            <!-- 0 -->
+                            <div class="number-cell zero-cell" data-number="0">0</div>
+                            <!-- 1-36 -->
+                            <div id="numberGrid1-36" class="numbers-1-36">
+                                <!-- JavaScript로 동적 생성 -->
+                            </div>
+                        </div>
+                        
+                        <!-- 외부 배팅 옵션 -->
+                        <div class="outside-bets">
+                            <!-- 더즌 배팅 -->
+                            <div class="dozen-bets">
+                                <div class="outside-bet-cell" data-bet="1st12">1st 12</div>
+                                <div class="outside-bet-cell" data-bet="2nd12">2nd 12</div>
+                                <div class="outside-bet-cell" data-bet="3rd12">3rd 12</div>
+                            </div>
+                            
+                            <!-- 컬럼 배팅 -->
+                            <div class="column-bets">
+                                <div class="outside-bet-cell" data-bet="col1">2:1</div>
+                                <div class="outside-bet-cell" data-bet="col2">2:1</div>
+                                <div class="outside-bet-cell" data-bet="col3">2:1</div>
+                            </div>
+                            
+                            <!-- 하이/로우, 홀/짝 배팅 -->
+                            <div class="low-high-bets">
+                                <div class="outside-bet-cell" data-bet="1-18">1-18</div>
+                                <div class="outside-bet-cell" data-bet="even">짝수</div>
+                                <div class="outside-bet-cell" data-bet="red">빨강</div>
+                                <div class="outside-bet-cell" data-bet="black">검정</div>
+                                <div class="outside-bet-cell" data-bet="odd">홀수</div>
+                                <div class="outside-bet-cell" data-bet="19-36">19-36</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 최근 결과 -->
+                    <div class="recent-numbers">
+                        <h4>최근 결과</h4>
+                        <div id="rouletteRecentNumbers" class="recent-numbers-list"></div>
+                    </div>
+                </div>
+
+                <!-- 사이드 패널 -->
+                <div class="roulette-side-panel">
+                    <!-- 학습 포인트 -->
+                    <div class="betting-chips">
+                        <h4>학습 포인트</h4>
+                        <div class="chips-grid">
+                            <div class="roulette-chip" data-value="10">10P</div>
+                            <div class="roulette-chip" data-value="25">25P</div>
+                            <div class="roulette-chip" data-value="50">50P</div>
+                            <div class="roulette-chip" data-value="100">100P</div>
+                            <div class="roulette-chip" data-value="500">500P</div>
+                        </div>
+                    </div>
+
+                    <!-- 배팅 요약 -->
+                    <div class="betting-summary">
+                        <h4>배팅 요약</h4>
+                        <div id="rouletteBetSummary"></div>
+                        <div class="total-bet-display">
+                            총 배팅: <span id="rouletteTotalBet">0P</span>
+                        </div>
+                    </div>
+
+                    <!-- 게임 컨트롤 -->
+                    <div class="game-controls">
+                        <button id="spinRouletteBtn" class="btn deal-btn">🎰 스핀</button>
+                        <button id="clearRouletteBetsBtn" class="btn clear-btn">배팅 취소</button>
+                    </div>
+
+                    <!-- 통계 기록 -->
+                    <div class="game-history">
+                        <div class="history-header">
+                            <span>통계 기록</span>
+                            <button id="clearRouletteHistoryBtn" class="btn-small">초기화</button>
+                        </div>
+                        <div id="rouletteHistoryResults" class="history-results"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="js/firebase-config.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/game.js"></script>
     <script src="js/holdem.js"></script>
+    <script src="js/roulette.js"></script>
 </body>
 </html>
