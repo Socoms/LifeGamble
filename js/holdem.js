@@ -17,6 +17,8 @@ class HoldemGame {
         this.myCards = [];
         this.gameRef = null;
         this.unsubscribe = null;
+        this.isLeaving = false; // 중복 제거 방지
+        this.boundHandleUnload = null;
         
         this.init();
     }
@@ -24,6 +26,11 @@ class HoldemGame {
     init() {
         console.log('홀덤 게임 초기화');
         this.setupEventListeners();
+        
+        // 페이지 이탈 시 자동 정리
+        this.boundHandleUnload = () => this.handleUnload();
+        window.addEventListener('beforeunload', this.boundHandleUnload);
+        window.addEventListener('pagehide', this.boundHandleUnload);
     }
 
     setupEventListeners() {
@@ -187,6 +194,22 @@ class HoldemGame {
     }
 
     async leaveTable() {
+        await this.removePlayerFromGame();
+
+        this.resetGame();
+        document.getElementById('joinHoldemTableBtn').style.display = 'block';
+        document.getElementById('leaveHoldemTableBtn').style.display = 'none';
+    }
+
+    async handleUnload() {
+        // 새로고침/탭 닫기 시 남은 자리를 정리
+        await this.removePlayerFromGame({ silent: true });
+    }
+
+    async removePlayerFromGame(options = {}) {
+        if (this.isLeaving) return;
+        this.isLeaving = true;
+
         if (this.unsubscribe) {
             this.unsubscribe();
             this.unsubscribe = null;
@@ -207,13 +230,13 @@ class HoldemGame {
                     }
                 }
             } catch (error) {
-                console.error('테이블 떠나기 오류:', error);
+                if (!options.silent) {
+                    console.error('테이블 떠나기 오류:', error);
+                }
             }
         }
 
-        this.resetGame();
-        document.getElementById('joinHoldemTableBtn').style.display = 'block';
-        document.getElementById('leaveHoldemTableBtn').style.display = 'none';
+        this.isLeaving = false;
     }
 
     setupRealtimeListener() {
