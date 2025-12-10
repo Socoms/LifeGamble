@@ -213,6 +213,7 @@ class HoldemGame {
                     chips: window.game ? window.game.money : 1000,
                     cards: [],
                     bet: 0,
+                    totalContribution: 0,
                     status: 'active', // active, folded, allin
                     isDealer: false,
                     isSmallBlind: false,
@@ -728,10 +729,10 @@ class HoldemGame {
                 return;
             }
             
-            // 딜러 위치 설정 (첫 번째 플레이어)
-            const dealerPosition = 0;
-            const smallBlindPosition = 1 % activePlayers.length;
-            const bigBlindPosition = 2 % activePlayers.length;
+            // 딜러 위치 설정 (기존 값 유지, 없으면 0)
+            const dealerPosition = this.dealerPosition || 0;
+            const smallBlindPosition = (dealerPosition + 1) % activePlayers.length;
+            const bigBlindPosition = (dealerPosition + 2) % activePlayers.length;
             
             // 블라인드 설정
             activePlayers.forEach((player, index) => {
@@ -739,16 +740,19 @@ class HoldemGame {
                 player.isSmallBlind = index === smallBlindPosition;
                 player.isBigBlind = index === bigBlindPosition;
                 player.hasActed = false;
+                player.totalContribution = player.totalContribution || 0;
                 
                 // 블라인드 베팅
                 if (player.isSmallBlind) {
                     const blindAmount = Math.min(this.smallBlind, player.chips);
                     player.chips -= blindAmount;
                     player.bet = blindAmount;
+                    player.totalContribution += blindAmount;
                 } else if (player.isBigBlind) {
                     const blindAmount = Math.min(this.bigBlind, player.chips);
                     player.chips -= blindAmount;
                     player.bet = blindAmount;
+                    player.totalContribution += blindAmount;
                 } else {
                     player.bet = 0;
                 }
@@ -825,6 +829,105 @@ class HoldemGame {
         // deckofcardsapi 규칙: 10은 0으로 표기
         const code = card.replace(/^10/, '0');
         return `https://deckofcardsapi.com/static/img/${code}.png`;
+    }
+
+    evaluateBestHand(cards) {
+        // cards: 7장 문자열 예: 'AS', 'TD'
+        const rankOrder = {'2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,'10':10,'J':11,'Q':12,'K':13,'A':14};
+        const byRank = {};
+        const bySuit = {};
+        const parsed = cards.map(c => {
+            const m = c.match(/^(10|[2-9JQKA])([SHDC])$/);
+            if (!m) return null;
+            const r = m[1];
+            const s = m[2];
+            if (!byRank[r]) byRank[r] = [];
+            byRank[r].push(s);
+            if (!bySuit[s]) bySuit[s] = [];
+            bySuit[s].push(r);
+            return {r, s, v: rankOrder[r]};
+        }).filter(Boolean);
+
+        const counts = Object.entries(byRank).map(([r, suits]) => ({r, v: rankOrder[r], cnt: suits.length})).sort((a,b)=>b.cnt-a.cnt||b.v-a.v);
+
+        // Flush
+        let flushSuit = null;
+        for (const [s, rs] of Object.entries(bySuit)) {
+            if (rs.length >= 5) { flushSuit = s; break; }
+        }
+        const flushCards = flushSuit ? parsed.filter(c=>c.s===flushSuit).sort((a,b)=>b.v-a.v) : [];
+
+        // Straight helper (optionally flush)
+        const getStraightHigh = (cardsArr) => {
+            const uniq = [...new Set(cardsArr.map(c=>c.v).sort((a,b)=>b-a))];
+            if (uniq.includes(14)) uniq.push(1); // wheel
+            for (let i=0;i<=uniq.length-5;i++){
+                const slice = uniq.slice(i,i+5);
+                if (slice[0]-slice[4]===4) return slice[0];
+            }
+            return null;
+        };
+
+        // Straight Flush
+        const sfHigh = flushCards.length>=5 ? getStraightHigh(flushCards) : null;
+        if (sfHigh) return {rank:[9,sfHigh], name:'스트레이트 플러시'};
+
+        // Four of a kind
+        const quads = counts.find(c=>c.cnt===4);
+        if (quads) {
+            const kicker = Math.max(...parsed.filter(c=>c.r!==quads.r).map(c=>c.v));
+            return {rank:[8,quads.v,kicker], name:'포카드'};
+        }
+
+        // Full house
+        const trips = counts.filter(c=>c.cnt===3);
+        const pairs = counts.filter(c=>c.cnt===2);
+        if (trips.length>=1 && (pairs.length>=1 || trips.length>=2)) {
+            const topTrip = trips[0];
+            const second = trips.length>=2 ? trips[1] : pairs[0];
+            return {rank:[7, topTrip.v, second.v], name:'풀 하우스'};
+        }
+
+        // Flush
+        if (flushCards.length>=5) {
+            const top5 = flushCards.slice(0,5).map(c=>c.v);
+            return {rank:[6, ...top5], name:'플러시'};
+        }
+
+        // Straight
+        const stHigh = getStraightHigh(parsed);
+        if (stHigh) return {rank:[5, stHigh], name:'스트레이트'};
+
+        // Trips
+        if (trips.length>=1) {
+            const trip = trips[0];
+            const kickers = parsed.filter(c=>c.r!==trip.r).map(c=>c.v).sort((a,b)=>b-a).slice(0,2);
+            return {rank:[4, trip.v, ...kickers], name:'트리플'};
+        }
+
+        // Two pair / One pair
+        if (pairs.length>=2) {
+            const p1 = pairs[0], p2 = pairs[1];
+            const kicker = Math.max(...parsed.filter(c=>c.r!==p1.r && c.r!==p2.r).map(c=>c.v));
+            return {rank:[3, p1.v, p2.v, kicker], name:'투 페어'};
+        }
+        if (pairs.length===1) {
+            const p1 = pairs[0];
+            const kickers = parsed.filter(c=>c.r!==p1.r).map(c=>c.v).sort((a,b)=>b-a).slice(0,3);
+            return {rank:[2, p1.v, ...kickers], name:'원 페어'};
+        }
+
+        // High card
+        const highs = parsed.map(c=>c.v).sort((a,b)=>b-a).slice(0,5);
+        return {rank:[1, ...highs], name:'하이카드'};
+    }
+
+    sameRank(a,b){
+        if (a.length !== b.length) return false;
+        for (let i=0;i<a.length;i++){
+            if (a[i]!==b[i]) return false;
+        }
+        return true;
     }
 
     buildDeck() {
@@ -958,11 +1061,23 @@ class HoldemGame {
                 const callAmount = Math.min(amount, myPlayer.chips);
                 myPlayer.chips -= callAmount;
                 myPlayer.bet += callAmount;
+                myPlayer.totalContribution = (myPlayer.totalContribution || 0) + callAmount;
             } else if (action === 'check') {
                 // 체크는 아무것도 하지 않음
             } else if (action === 'raise') {
+                // 최소 레이즈: 현재 베팅 대비 빅블라인드 이상
+                const minRaise = Math.max(this.bigBlind, (this.currentBet - myPlayer.bet) + this.bigBlind);
+                if (amount < minRaise) {
+                    alert(`최소 레이즈 금액은 ${minRaise}P 입니다.`);
+                    return;
+                }
+                if (amount > myPlayer.chips) {
+                    alert('보유 칩이 부족합니다.');
+                    return;
+                }
                 myPlayer.chips -= amount;
                 myPlayer.bet += amount;
+                myPlayer.totalContribution = (myPlayer.totalContribution || 0) + amount;
                 // 레이즈 시 다른 플레이어의 hasActed를 리셋해 다시 액션하도록 함
                 players.forEach((p, idx) => {
                     if (idx !== myPlayerIndex && p.status === 'active') {
@@ -978,11 +1093,8 @@ class HoldemGame {
                 nextPlayerIndex = (nextPlayerIndex + 1) % players.length;
             }
 
-            // 팟 업데이트
-            let newPot = this.pot;
-            players.forEach(p => {
-                newPot += p.bet;
-            });
+            // 팟 업데이트: 모든 totalContribution 합산
+            const newPot = players.reduce((sum, p) => sum + (p.totalContribution || 0), 0);
 
             // 현재 베팅 업데이트
             const newCurrentBet = Math.max(...players.map(p => p.bet));
@@ -1051,6 +1163,7 @@ class HoldemGame {
             if (p.status === 'active') {
                 p.bet = 0;
                 p.hasActed = false;
+                p.totalContribution = p.totalContribution || 0;
             }
         });
 
@@ -1076,23 +1189,43 @@ class HoldemGame {
     }
 
     async determineWinner() {
-        // 간단한 임시 승자 결정: 폴드하지 않은 플레이어 중 무작위 1명 선택
+        // 간단한 핸드 평가로 승자를 결정하고 팟 분배
         if (!this.gameRef) return;
 
         const gameData = await this.gameRef.get();
         if (!gameData.exists) return;
 
         const players = gameData.data().players || [];
-        const contenders = players.filter(p => p.status !== 'folded');
+        const community = this.communityCards || [];
+
+        // 쇼다운 대상 (폴드 제외, 카드 2장 보유)
+        const contenders = players.filter(p => p.status !== 'folded' && (p.cards || []).length === 2);
         if (contenders.length === 0) return;
 
-        const winnerIndex = Math.floor(Math.random() * contenders.length);
-        const winner = contenders[winnerIndex];
+        // 핸드 평가
+        const evaluated = contenders.map(p => {
+            const full = [...(p.cards || []), ...community];
+            const evalResult = this.evaluateBestHand(full);
+            return { player: p, rank: evalResult.rank, name: evalResult.name };
+        });
 
-        // 팟을 승자에게 지급
+        // 최고 핸드 찾기
+        evaluated.sort((a, b) => {
+            for (let i = 0; i < a.rank.length; i++) {
+                if (a.rank[i] !== b.rank[i]) return b.rank[i] - a.rank[i];
+            }
+            return 0;
+        });
+        const bestRank = evaluated[0].rank;
+        const winners = evaluated.filter(e => this.sameRank(e.rank, bestRank));
+
+        // 팟 분배 (사이드팟 미구현: 총 팟을 동등 분배)
+        const totalPot = gameData.data().pot || 0;
+        const share = Math.floor(totalPot / winners.length);
         const updatedPlayers = players.map(p => {
-            if (p.uid === winner.uid) {
-                return { ...p, chips: p.chips + (gameData.data().pot || 0) };
+            const winner = winners.find(w => w.player.uid === p.uid);
+            if (winner) {
+                return { ...p, chips: p.chips + share };
             }
             return p;
         });
@@ -1104,7 +1237,8 @@ class HoldemGame {
         });
 
         // 결과 알림
-        alert(`쇼다운! ${winner.nickname || '플레이어'}가 팟을 가져갑니다.`);
+        const winnerNames = winners.map(w => w.player.nickname || '플레이어').join(', ');
+        alert(`쇼다운! 승자: ${winnerNames} (핸드: ${evaluated[0].name})`);
 
         // 잠시 후 새 게임 시작
         setTimeout(() => {
@@ -1125,6 +1259,7 @@ class HoldemGame {
             p.bet = 0;
             p.status = 'active';
             p.hasActed = false;
+            p.totalContribution = 0;
         });
 
         // 딜러 위치 이동
