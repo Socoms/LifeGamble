@@ -186,7 +186,7 @@ class HoldemGame {
                         // remaining이 30초 이상이면 countdownStart가 잘못된 것이므로 참여 가능
                         if (remaining > 0 && remaining <= 5 && remaining <= 30) {
                             alert(`게임 시작 ${Math.ceil(remaining)}초 전에는 참가할 수 없습니다. 잠시 후 다시 시도해주세요.`);
-                            return;
+                    return;
                         }
                     }
                 }
@@ -592,7 +592,7 @@ class HoldemGame {
             this.stopCountdownTicker();
             return;
         }
-        
+
         // 게임이 이미 진행 중이면 카운트다운 중지
         if (this.status === 'playing') {
             console.log('게임이 이미 진행 중');
@@ -930,6 +930,22 @@ class HoldemGame {
         return true;
     }
 
+    showHoldemResult(message) {
+        const box = document.getElementById('holdemResultMessage');
+        if (box) {
+            box.style.display = 'block';
+            box.textContent = message;
+        }
+    }
+
+    clearHoldemResult() {
+        const box = document.getElementById('holdemResultMessage');
+        if (box) {
+            box.style.display = 'none';
+            box.textContent = '';
+        }
+    }
+
     buildDeck() {
         const suits = ['S', 'H', 'D', 'C'];
         const ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
@@ -1082,7 +1098,7 @@ class HoldemGame {
                 players.forEach((p, idx) => {
                     if (idx !== myPlayerIndex && p.status === 'active') {
                         p.hasActed = false;
-                    }
+            }
                 });
             }
             myPlayer.hasActed = true;
@@ -1236,9 +1252,9 @@ class HoldemGame {
             pot: 0
         });
 
-        // 결과 알림
+        // 결과 표시
         const winnerNames = winners.map(w => w.player.nickname || '플레이어').join(', ');
-        alert(`쇼다운! 승자: ${winnerNames} (핸드: ${evaluated[0].name})`);
+        this.showHoldemResult(`쇼다운 결과: ${winnerNames} (핸드: ${evaluated[0].name})`);
 
         // 잠시 후 새 게임 시작
         setTimeout(() => {
@@ -1252,6 +1268,7 @@ class HoldemGame {
 
         const gameData = await this.gameRef.get();
         const players = gameData.data().players || [];
+        this.clearHoldemResult();
         
         // 플레이어 초기화
         players.forEach(p => {
