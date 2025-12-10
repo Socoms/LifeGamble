@@ -210,6 +210,14 @@ class HoldemGame {
                     status: 'starting',
                     locked: false
                 });
+                // 업데이트 후 다시 가져와서 countdownStart 설정
+                const updatedData = await this.gameRef.get();
+                if (updatedData.exists) {
+                    this.countdownStart = updatedData.data().countdownStart;
+                }
+            } else {
+                // 기존 countdownStart가 있으면 설정
+                this.countdownStart = countdownStart;
             }
 
             // 실시간 리스너 설정
@@ -531,16 +539,32 @@ class HoldemGame {
         const timerEl = document.getElementById('holdemGameTimer');
         const phaseEl = document.getElementById('holdemGamePhaseText');
 
+        // 카운트다운이 필요한 상태인지 확인
         if (!this.countdownStart || (this.status !== 'waiting' && this.status !== 'starting')) {
             if (timerEl) timerEl.textContent = '-';
-            if (phaseEl) phaseEl.textContent = this.getRoundName(this.currentRound || 'waiting');
+            if (phaseEl) {
+                if (this.currentRound === 'waiting') {
+                    phaseEl.textContent = '대기 중';
+                } else {
+                    phaseEl.textContent = this.getRoundName(this.currentRound || 'waiting');
+                }
+            }
             this.stopCountdownTicker();
             return;
         }
 
-        const startMillis = this.countdownStart.toMillis ? this.countdownStart.toMillis() :
-            this.countdownStart.seconds ? this.countdownStart.seconds * 1000 :
-            Number(this.countdownStart) || Date.now();
+        // countdownStart를 밀리초로 변환
+        let startMillis;
+        if (this.countdownStart.toMillis) {
+            startMillis = this.countdownStart.toMillis();
+        } else if (this.countdownStart.seconds) {
+            startMillis = this.countdownStart.seconds * 1000;
+        } else if (typeof this.countdownStart === 'number') {
+            startMillis = this.countdownStart;
+        } else {
+            // Timestamp 객체가 아닌 경우 현재 시간 사용
+            startMillis = Date.now();
+        }
 
         this.startCountdownTicker(startMillis);
     }
@@ -564,11 +588,18 @@ class HoldemGame {
     }
 
     updateCountdownDisplay(startMillis, timerEl, phaseEl) {
+        // startMillis는 이미 밀리초로 변환된 값
         const elapsed = (Date.now() - startMillis) / 1000;
         let remaining = Math.max(0, 30 - Math.floor(elapsed));
 
         if (timerEl) timerEl.textContent = `${remaining}s`;
-        if (phaseEl) phaseEl.textContent = `게임 시작까지 ${remaining}s`;
+        if (phaseEl) {
+            if (remaining > 0) {
+                phaseEl.textContent = `게임 시작까지 ${remaining}s`;
+            } else {
+                phaseEl.textContent = '게임 시작 중...';
+            }
+        }
 
         // 5초 이하에서는 참가/퇴장 불가
         if (remaining <= 5 && !this.locked && this.gameRef) {
@@ -591,38 +622,6 @@ class HoldemGame {
         }
     }
     
-    handleCountdownAndAutostart() {
-        const timerEl = document.getElementById('holdemGameTimer');
-        const phaseEl = document.getElementById('holdemGamePhaseText');
-
-        if (!this.countdownStart || (this.status !== 'waiting' && this.status !== 'starting')) {
-            if (timerEl) timerEl.textContent = '-';
-            if (phaseEl) phaseEl.textContent = this.getRoundName(this.currentRound || 'waiting');
-            return;
-        }
-
-        const startMillis = this.countdownStart.toMillis ? this.countdownStart.toMillis() :
-            this.countdownStart.seconds ? this.countdownStart.seconds * 1000 :
-            Number(this.countdownStart) || Date.now();
-
-        const elapsed = (Date.now() - startMillis) / 1000;
-        let remaining = Math.max(0, 30 - Math.floor(elapsed));
-
-        if (timerEl) timerEl.textContent = `${remaining}s`;
-        if (phaseEl) phaseEl.textContent = `게임 시작까지 ${remaining}s`;
-
-        // 5초 이하에서는 참가/퇴장 불가
-        if (remaining <= 5 && !this.locked && this.gameRef) {
-            this.locked = true;
-            this.gameRef.update({ locked: true }).catch(() => {});
-        }
-
-        // 카운트다운 종료 시 자동 시작
-        if (remaining <= 0 && !this.isStarting) {
-            this.startGame(true);
-        }
-    }
-    
     async startGame(autoStart = false) {
         if (!this.gameRef) return;
         if (this.isStarting) return;
@@ -637,12 +636,25 @@ class HoldemGame {
             const activePlayers = players.filter(p => p.status === 'active' || !p.status);
             
             if (activePlayers.length < 2) {
-                if (!autoStart) alert('게임을 시작하려면 최소 2명의 플레이어가 필요합니다.');
+                if (!autoStart) {
+                    alert('게임을 시작하려면 최소 2명의 플레이어가 필요합니다.');
+                } else {
+                    // 자동 시작인데 플레이어가 부족하면 카운트다운 재시작
+                    await this.gameRef.update({
+                        countdownStart: firebase.firestore.FieldValue.serverTimestamp(),
+                        status: 'starting',
+                        locked: false
+                    });
+                    const updatedData = await this.gameRef.get();
+                    if (updatedData.exists) {
+                        this.countdownStart = updatedData.data().countdownStart;
+                    }
+                }
                 this.isStarting = false;
                 return;
             }
             
-            if (data.currentRound && data.currentRound !== 'waiting') {
+            if (data.currentRound && data.currentRound !== 'waiting' && data.currentRound !== 'starting') {
                 if (!autoStart) alert('이미 게임이 진행 중입니다.');
                 this.isStarting = false;
                 return;
