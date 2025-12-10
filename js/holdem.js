@@ -566,9 +566,16 @@ class HoldemGame {
         const timerEl = document.getElementById('holdemGameTimer');
         const phaseEl = document.getElementById('holdemGamePhaseText');
 
+        console.log('handleCountdownAndAutostart 호출:', {
+            countdownStart: this.countdownStart,
+            status: this.status,
+            currentRound: this.currentRound
+        });
+
         // 카운트다운이 필요한 상태인지 확인
-        // countdownStart가 있고, 게임이 waiting 또는 starting 상태일 때 카운트다운 시작
+        // countdownStart가 없으면 카운트다운 불가
         if (!this.countdownStart) {
+            console.log('countdownStart가 없음');
             if (timerEl) timerEl.textContent = '-';
             if (phaseEl) {
                 if (this.currentRound === 'waiting' || this.status === 'waiting') {
@@ -582,7 +589,8 @@ class HoldemGame {
         }
         
         // 게임이 이미 진행 중이면 카운트다운 중지
-        if (this.status === 'playing' || (this.currentRound !== 'waiting' && this.currentRound !== 'starting')) {
+        if (this.status === 'playing') {
+            console.log('게임이 이미 진행 중');
             if (timerEl) timerEl.textContent = '-';
             if (phaseEl) {
                 phaseEl.textContent = this.getRoundName(this.currentRound || 'waiting');
@@ -600,10 +608,12 @@ class HoldemGame {
         } else if (typeof this.countdownStart === 'number') {
             startMillis = this.countdownStart;
         } else {
+            console.warn('countdownStart 형식이 올바르지 않음:', this.countdownStart);
             // Timestamp 객체가 아닌 경우 현재 시간 사용
             startMillis = Date.now();
         }
 
+        console.log('카운트다운 시작:', { startMillis, currentTime: Date.now() });
         this.startCountdownTicker(startMillis);
     }
 
@@ -611,15 +621,22 @@ class HoldemGame {
         const timerEl = document.getElementById('holdemGameTimer');
         const phaseEl = document.getElementById('holdemGamePhaseText');
 
+        console.log('startCountdownTicker 호출:', startMillis);
+
+        // 기존 타이머 정리
+        if (this.countdownTimer) {
+            clearInterval(this.countdownTimer);
+            this.countdownTimer = null;
+        }
+
         // 초기 표시
         this.updateCountdownDisplay(startMillis, timerEl, phaseEl);
 
-        if (this.countdownTimer) {
-            clearInterval(this.countdownTimer);
-        }
+        // 1초마다 업데이트
         this.countdownTimer = setInterval(() => {
             const keepRunning = this.updateCountdownDisplay(startMillis, timerEl, phaseEl);
             if (!keepRunning) {
+                console.log('카운트다운 종료');
                 this.stopCountdownTicker();
             }
         }, 1000);
@@ -627,8 +644,16 @@ class HoldemGame {
 
     updateCountdownDisplay(startMillis, timerEl, phaseEl) {
         // startMillis는 이미 밀리초로 변환된 값
-        const elapsed = (Date.now() - startMillis) / 1000;
+        const now = Date.now();
+        const elapsed = (now - startMillis) / 1000;
         let remaining = Math.max(0, 30 - Math.floor(elapsed));
+
+        console.log('updateCountdownDisplay:', { 
+            startMillis, 
+            now, 
+            elapsed: elapsed.toFixed(2), 
+            remaining 
+        });
 
         if (timerEl) timerEl.textContent = `${remaining}s`;
         if (phaseEl) {
@@ -640,13 +665,14 @@ class HoldemGame {
         }
 
         // 5초 이하에서는 참가/퇴장 불가
-        if (remaining <= 5 && !this.locked && this.gameRef) {
+        if (remaining <= 5 && remaining > 0 && !this.locked && this.gameRef) {
             this.locked = true;
             this.gameRef.update({ locked: true }).catch(() => {});
         }
 
         // 카운트다운 종료 시 자동 시작
         if (remaining <= 0 && !this.isStarting) {
+            console.log('카운트다운 종료, 게임 시작');
             this.startGame(true);
             return false;
         }
