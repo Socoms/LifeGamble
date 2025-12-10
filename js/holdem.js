@@ -162,7 +162,9 @@ class HoldemGame {
                 this.updateDisplay();
             } else {
                 // 카운트다운 시간 확인 (5초 이하이면 참여 불가)
-                if (countdownStart) {
+                // 단, countdownStart가 없거나 게임이 waiting/starting 상태가 아니면 참여 가능
+                const gameStatus = gameData.exists ? gameData.data().status : 'waiting';
+                if (countdownStart && (gameStatus === 'starting' || gameStatus === 'waiting')) {
                     let startMillis;
                     if (countdownStart.toMillis) {
                         startMillis = countdownStart.toMillis();
@@ -177,11 +179,12 @@ class HoldemGame {
                     
                     if (startMillis) {
                         const elapsed = (Date.now() - startMillis) / 1000;
-                        const remaining = Math.max(0, 30 - Math.floor(elapsed));
+                        const remaining = 30 - Math.floor(elapsed);
                         
-                        // remaining이 0 이하면 이미 시간이 지났으므로 참여 가능
                         // remaining이 5초 이하이고 0보다 크면 참여 불가
-                        if (remaining > 0 && remaining <= 5) {
+                        // remaining이 0 이하면 이미 시간이 지났으므로 참여 가능
+                        // remaining이 30초 이상이면 countdownStart가 잘못된 것이므로 참여 가능
+                        if (remaining > 0 && remaining <= 5 && remaining <= 30) {
                             alert(`게임 시작 ${Math.ceil(remaining)}초 전에는 참가할 수 없습니다. 잠시 후 다시 시도해주세요.`);
                             return;
                         }
@@ -564,14 +567,25 @@ class HoldemGame {
         const phaseEl = document.getElementById('holdemGamePhaseText');
 
         // 카운트다운이 필요한 상태인지 확인
-        if (!this.countdownStart || (this.status !== 'waiting' && this.status !== 'starting')) {
+        // countdownStart가 있고, 게임이 waiting 또는 starting 상태일 때 카운트다운 시작
+        if (!this.countdownStart) {
             if (timerEl) timerEl.textContent = '-';
             if (phaseEl) {
-                if (this.currentRound === 'waiting') {
+                if (this.currentRound === 'waiting' || this.status === 'waiting') {
                     phaseEl.textContent = '대기 중';
                 } else {
                     phaseEl.textContent = this.getRoundName(this.currentRound || 'waiting');
                 }
+            }
+            this.stopCountdownTicker();
+            return;
+        }
+        
+        // 게임이 이미 진행 중이면 카운트다운 중지
+        if (this.status === 'playing' || (this.currentRound !== 'waiting' && this.currentRound !== 'starting')) {
+            if (timerEl) timerEl.textContent = '-';
+            if (phaseEl) {
+                phaseEl.textContent = this.getRoundName(this.currentRound || 'waiting');
             }
             this.stopCountdownTicker();
             return;
