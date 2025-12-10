@@ -738,6 +738,7 @@ class HoldemGame {
                 player.isDealer = index === dealerPosition;
                 player.isSmallBlind = index === smallBlindPosition;
                 player.isBigBlind = index === bigBlindPosition;
+                player.hasActed = false;
                 
                 // 블라인드 베팅
                 if (player.isSmallBlind) {
@@ -962,7 +963,14 @@ class HoldemGame {
             } else if (action === 'raise') {
                 myPlayer.chips -= amount;
                 myPlayer.bet += amount;
+                // 레이즈 시 다른 플레이어의 hasActed를 리셋해 다시 액션하도록 함
+                players.forEach((p, idx) => {
+                    if (idx !== myPlayerIndex && p.status === 'active') {
+                        p.hasActed = false;
+                    }
+                });
             }
+            myPlayer.hasActed = true;
 
             // 다음 플레이어로 이동
             let nextPlayerIndex = (this.currentPlayerIndex + 1) % players.length;
@@ -1002,8 +1010,9 @@ class HoldemGame {
             return;
         }
 
-        const allBetsEqual = activePlayers.every(p => p.bet === this.currentBet);
-        const allActed = activePlayers.every(p => p.bet === this.currentBet || p.status === 'folded');
+        const targetBet = Math.max(...players.map(p => p.bet || 0));
+        const allBetsEqual = activePlayers.every(p => p.bet === targetBet);
+        const allActed = activePlayers.every(p => p.hasActed);
 
         if (allBetsEqual && allActed) {
             // 다음 라운드로 진행
@@ -1041,6 +1050,7 @@ class HoldemGame {
         players.forEach(p => {
             if (p.status === 'active') {
                 p.bet = 0;
+                p.hasActed = false;
             }
         });
 
@@ -1066,18 +1076,40 @@ class HoldemGame {
     }
 
     async determineWinner() {
-        // 승자 결정 로직 (패 평가)
-        // 실제 구현 시 evaluateHand 함수 사용
+        // 간단한 임시 승자 결정: 폴드하지 않은 플레이어 중 무작위 1명 선택
         if (!this.gameRef) return;
 
-        await this.gameRef.update({
-            currentRound: 'showdown'
+        const gameData = await this.gameRef.get();
+        if (!gameData.exists) return;
+
+        const players = gameData.data().players || [];
+        const contenders = players.filter(p => p.status !== 'folded');
+        if (contenders.length === 0) return;
+
+        const winnerIndex = Math.floor(Math.random() * contenders.length);
+        const winner = contenders[winnerIndex];
+
+        // 팟을 승자에게 지급
+        const updatedPlayers = players.map(p => {
+            if (p.uid === winner.uid) {
+                return { ...p, chips: p.chips + (gameData.data().pot || 0) };
+            }
+            return p;
         });
+
+        await this.gameRef.update({
+            currentRound: 'showdown',
+            players: updatedPlayers,
+            pot: 0
+        });
+
+        // 결과 알림
+        alert(`쇼다운! ${winner.nickname || '플레이어'}가 팟을 가져갑니다.`);
 
         // 잠시 후 새 게임 시작
         setTimeout(() => {
             this.startNewHand();
-        }, 5000);
+        }, 3000);
     }
 
     async startNewHand() {
@@ -1092,6 +1124,7 @@ class HoldemGame {
             p.cards = [];
             p.bet = 0;
             p.status = 'active';
+            p.hasActed = false;
         });
 
         // 딜러 위치 이동
