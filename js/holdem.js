@@ -171,15 +171,20 @@ class HoldemGame {
                     } else if (typeof countdownStart === 'number') {
                         startMillis = countdownStart;
                     } else {
-                        startMillis = Date.now();
+                        // 유효하지 않은 countdownStart면 참여 가능
+                        startMillis = null;
                     }
                     
-                    const elapsed = (Date.now() - startMillis) / 1000;
-                    const remaining = 30 - Math.floor(elapsed);
-                    
-                    if (remaining <= 5) {
-                        alert('게임 시작 5초 전에는 참가할 수 없습니다. 잠시 후 다시 시도해주세요.');
-                        return;
+                    if (startMillis) {
+                        const elapsed = (Date.now() - startMillis) / 1000;
+                        const remaining = Math.max(0, 30 - Math.floor(elapsed));
+                        
+                        // remaining이 0 이하면 이미 시간이 지났으므로 참여 가능
+                        // remaining이 5초 이하이고 0보다 크면 참여 불가
+                        if (remaining > 0 && remaining <= 5) {
+                            alert(`게임 시작 ${Math.ceil(remaining)}초 전에는 참가할 수 없습니다. 잠시 후 다시 시도해주세요.`);
+                            return;
+                        }
                     }
                 }
                 // 빈 자리 찾기
@@ -235,6 +240,12 @@ class HoldemGame {
 
             // 실시간 리스너 설정
             this.setupRealtimeListener();
+            
+            // 카운트다운 시작을 위해 즉시 업데이트
+            const finalGameData = await this.gameRef.get();
+            if (finalGameData.exists) {
+                await this.updateGameState(finalGameData.data());
+            }
 
             document.getElementById('joinHoldemTableBtn').style.display = 'none';
             document.getElementById('leaveHoldemTableBtn').style.display = 'block';
