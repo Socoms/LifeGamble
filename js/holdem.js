@@ -124,10 +124,6 @@ class HoldemGame {
             if (targetGameDoc) {
                 // 기존 게임에 참가
                 const data = targetGameDoc.data() || {};
-                if (data.locked) {
-                    alert('곧 게임이 시작됩니다. 잠시 후 참여해주세요.');
-                    return;
-                }
                 this.gameId = targetGameDoc.id;
                 this.gameRef = gamesRef.doc(this.gameId);
             } else {
@@ -165,9 +161,26 @@ class HoldemGame {
                 // 참가 상태면 타이머 표시를 위해 updateDisplay 호출
                 this.updateDisplay();
             } else {
-                if (locked) {
-                    alert('5초 남은 상태에서는 참가할 수 없습니다.');
-                    return;
+                // 카운트다운 시간 확인 (5초 이하이면 참여 불가)
+                if (countdownStart) {
+                    let startMillis;
+                    if (countdownStart.toMillis) {
+                        startMillis = countdownStart.toMillis();
+                    } else if (countdownStart.seconds) {
+                        startMillis = countdownStart.seconds * 1000;
+                    } else if (typeof countdownStart === 'number') {
+                        startMillis = countdownStart;
+                    } else {
+                        startMillis = Date.now();
+                    }
+                    
+                    const elapsed = (Date.now() - startMillis) / 1000;
+                    const remaining = 30 - Math.floor(elapsed);
+                    
+                    if (remaining <= 5) {
+                        alert('게임 시작 5초 전에는 참가할 수 없습니다. 잠시 후 다시 시도해주세요.');
+                        return;
+                    }
                 }
                 // 빈 자리 찾기
                 const occupiedSeats = existingPlayers.map(p => p.seat).filter(seat => seat >= 0 && seat < 6);
