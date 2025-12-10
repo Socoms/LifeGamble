@@ -821,9 +821,27 @@ class HoldemGame {
     }
 
     getCardImage(card) {
-        // 카드 이미지 URL 생성 (실제 구현 시 카드 이미지 경로 사용)
-        // 여기서는 텍스트로 표시
-        return `https://deckofcardsapi.com/static/img/${card}.png`;
+        // deckofcardsapi 규칙: 10은 0으로 표기
+        const code = card.replace(/^10/, '0');
+        return `https://deckofcardsapi.com/static/img/${code}.png`;
+    }
+
+    buildDeck() {
+        const suits = ['S', 'H', 'D', 'C'];
+        const ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+        this.deck = [];
+        
+        for (const suit of suits) {
+            for (const rank of ranks) {
+                this.deck.push(`${rank}${suit}`);
+            }
+        }
+        
+        // 섞기 (Fisher–Yates)
+        for (let i = this.deck.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [this.deck[i], this.deck[j]] = [this.deck[j], this.deck[i]];
+        }
     }
 
     getRoundName(round) {
@@ -1036,18 +1054,14 @@ class HoldemGame {
     }
 
     async dealCommunityCards(count) {
-        // 실제로는 덱에서 카드를 뽑아야 함
-        // 여기서는 임시로 랜덤 카드 생성
-        const suits = ['S', 'H', 'D', 'C'];
-        const ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
-        const cards = [];
-        
-        for (let i = 0; i < count; i++) {
-            const suit = suits[Math.floor(Math.random() * suits.length)];
-            const rank = ranks[Math.floor(Math.random() * ranks.length)];
-            cards.push(`${rank}${suit}`);
+        // 공용 덱에서 카드를 뽑아 중복을 방지
+        if (!this.deck || this.deck.length < count) {
+            this.buildDeck();
         }
-        
+        const cards = [];
+        for (let i = 0; i < count && this.deck.length > 0; i++) {
+            cards.push(this.deck.pop());
+        }
         return cards;
     }
 
@@ -1107,27 +1121,12 @@ class HoldemGame {
             const players = gameData.data().players || [];
             const activePlayers = players.filter(p => p.status === 'active');
             
-            // 덱 생성 및 섞기
-            const suits = ['S', 'H', 'D', 'C'];
-            const ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
-            const deck = [];
-            
-            for (const suit of suits) {
-                for (const rank of ranks) {
-                    deck.push(`${rank}${suit}`);
-                }
-            }
-            
-            // 덱 섞기
-            for (let i = deck.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [deck[i], deck[j]] = [deck[j], deck[i]];
-            }
+            // 덱 생성 및 섞기 (중복 방지)
+            this.buildDeck();
             
             // 각 플레이어에게 2장씩 카드 나누기
-            let deckIndex = 0;
             activePlayers.forEach(player => {
-                player.cards = [deck[deckIndex++], deck[deckIndex++]];
+                player.cards = [this.deck.pop(), this.deck.pop()];
             });
             
             // Firestore에 업데이트
