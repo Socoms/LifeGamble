@@ -226,6 +226,7 @@ class HoldemGame {
 
             // 카운트다운 시작 설정 (없을 때만)
             if (!countdownStart) {
+                console.log('새로운 카운트다운 시작');
                 await this.gameRef.update({
                     countdownStart: firebase.firestore.FieldValue.serverTimestamp(),
                     status: 'starting',
@@ -235,10 +236,13 @@ class HoldemGame {
                 const updatedData = await this.gameRef.get();
                 if (updatedData.exists) {
                     this.countdownStart = updatedData.data().countdownStart;
+                    this.status = 'starting';
+                    console.log('countdownStart 설정됨:', this.countdownStart);
                 }
             } else {
                 // 기존 countdownStart가 있으면 설정
                 this.countdownStart = countdownStart;
+                console.log('기존 countdownStart 사용:', this.countdownStart);
             }
 
             // 실시간 리스너 설정
