@@ -1364,14 +1364,14 @@ class HoldemGame {
         let detailsHTML = '';
         if (evaluated && evaluated.length > 0) {
             detailsHTML = '<h4 style="color: #ffd93d; margin-bottom: 15px;">핸드 결과</h4>';
-            evaluated.forEach((eval, idx) => {
-                const isMyHand = eval.player.uid === myUid;
-                const isWin = eval.player.uid === winner.uid;
+            evaluated.forEach((evalResult, idx) => {
+                const isMyHand = evalResult.player.uid === myUid;
+                const isWin = evalResult.player.uid === winner.uid;
                 const status = isWin ? '🏆 승리' : (isMyHand ? '패배' : '');
                 detailsHTML += `
                     <div style="padding: 10px; margin: 5px 0; background: ${isMyHand ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.2)'}; border-radius: 5px;">
-                        <strong>${eval.player.nickname}</strong> ${status ? `- ${status}` : ''}<br>
-                        핸드: <strong style="color: #ffd93d;">${eval.name}</strong>
+                        <strong>${evalResult.player.nickname}</strong> ${status ? `- ${status}` : ''}<br>
+                        핸드: <strong style="color: #ffd93d;">${evalResult.name}</strong>
                     </div>
                 `;
             });
