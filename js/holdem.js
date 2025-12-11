@@ -56,13 +56,16 @@ class HoldemGame {
         });
 
         // 홀덤 게임 버튼들 - 이벤트 위임 사용
-        document.addEventListener('click', (e) => {
+        const clickHandler = (e) => {
+            console.log('클릭 이벤트 발생:', e.target.id, e.target);
             if (e.target.id === 'showHoldemRulesBtn' || e.target.closest('#showHoldemRulesBtn')) {
                 this.showRules();
             } else if (e.target.id === 'closeHoldemRules' || e.target.closest('#closeHoldemRules')) {
                 this.hideRules();
             } else if (e.target.id === 'joinHoldemTableBtn' || e.target.closest('#joinHoldemTableBtn')) {
-                console.log('joinHoldemTableBtn 클릭 감지');
+                console.log('joinHoldemTableBtn 클릭 감지 (이벤트 위임)');
+                e.preventDefault();
+                e.stopPropagation();
                 this.joinTable();
             } else if (e.target.id === 'leaveHoldemTableBtn' || e.target.closest('#leaveHoldemTableBtn')) {
                 this.leaveTable();
@@ -71,18 +74,37 @@ class HoldemGame {
             } else if (e.target.id === 'backToMenuBtnHoldem' || e.target.closest('#backToMenuBtnHoldem')) {
                 this.backToMenu();
             }
-        });
+        };
+        document.addEventListener('click', clickHandler);
+        console.log('전역 클릭 이벤트 리스너 등록됨');
         
         // 기존 방식도 유지 (버튼이 있을 때)
         const joinBtn = document.getElementById('joinHoldemTableBtn');
         if (joinBtn) {
-            console.log('joinHoldemTableBtn 요소 찾음, 이벤트 리스너 추가');
-            joinBtn.addEventListener('click', () => {
-                console.log('joinHoldemTableBtn 클릭 이벤트 발생');
+            console.log('joinHoldemTableBtn 요소 찾음, 직접 이벤트 리스너 추가');
+            joinBtn.addEventListener('click', (e) => {
+                console.log('joinHoldemTableBtn 클릭 이벤트 발생 (직접 리스너)');
+                e.preventDefault();
+                e.stopPropagation();
                 this.joinTable();
             });
         } else {
-            console.warn('joinHoldemTableBtn 요소를 찾을 수 없습니다');
+            console.warn('joinHoldemTableBtn 요소를 찾을 수 없습니다 - 1초 후 재시도');
+            // 1초 후 다시 시도
+            setTimeout(() => {
+                const retryBtn = document.getElementById('joinHoldemTableBtn');
+                if (retryBtn) {
+                    console.log('재시도: joinHoldemTableBtn 요소 찾음');
+                    retryBtn.addEventListener('click', (e) => {
+                        console.log('joinHoldemTableBtn 클릭 이벤트 발생 (재시도)');
+                        e.preventDefault();
+                        e.stopPropagation();
+                        this.joinTable();
+                    });
+                } else {
+                    console.error('재시도 실패: joinHoldemTableBtn 요소를 찾을 수 없습니다');
+                }
+            }, 1000);
         }
         
         // 액션 버튼들
