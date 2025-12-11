@@ -32,6 +32,11 @@ class HoldemGame {
 
     init() {
         console.log('홀덤 게임 초기화');
+        
+        // 버튼 존재 확인
+        const joinBtn = document.getElementById('joinHoldemTableBtn');
+        console.log('joinHoldemTableBtn 요소 확인:', joinBtn);
+        
         this.setupEventListeners();
         
         // 페이지 이탈 시 자동 정리
@@ -1707,10 +1712,25 @@ class HoldemGame {
 
 // 전역 인스턴스
 let holdemGame;
-document.addEventListener('DOMContentLoaded', () => {
-    holdemGame = new HoldemGame();
-    window.holdemGame = holdemGame;
-});
+
+// DOMContentLoaded 이벤트 리스너
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeHoldem);
+} else {
+    // DOM이 이미 로드된 경우 즉시 실행
+    initializeHoldem();
+}
+
+function initializeHoldem() {
+    console.log('HoldemGame 인스턴스 생성 시작');
+    try {
+        holdemGame = new HoldemGame();
+        window.holdemGame = holdemGame;
+        console.log('HoldemGame 인스턴스 생성 완료:', holdemGame);
+    } catch (error) {
+        console.error('HoldemGame 인스턴스 생성 오류:', error);
+    }
+}
 
 
 
