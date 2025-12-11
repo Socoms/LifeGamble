@@ -1180,10 +1180,16 @@ class HoldemGame {
     }
 
     async checkBettingRoundComplete(players) {
+        console.log('checkBettingRoundComplete 호출:', { 
+            currentRound: this.currentRound, 
+            playersCount: players.length 
+        });
+        
         // 모든 플레이어가 같은 금액을 베팅했는지 확인
         const activePlayers = players.filter(p => p.status === 'active');
         if (activePlayers.length <= 1) {
             // 승자 결정
+            console.log('활성 플레이어가 1명 이하 - determineWinner 호출');
             await this.determineWinner();
             return;
         }
@@ -1192,9 +1198,26 @@ class HoldemGame {
         const allBetsEqual = activePlayers.every(p => p.bet === targetBet);
         const allActed = activePlayers.every(p => p.hasActed);
 
+        console.log('베팅 완료 체크:', {
+            targetBet,
+            allBetsEqual,
+            allActed,
+            activePlayers: activePlayers.map(p => ({ name: p.nickname, bet: p.bet, hasActed: p.hasActed }))
+        });
+
         if (allBetsEqual && allActed) {
+            // 리버 라운드일 때는 바로 쇼다운
+            if (this.currentRound === 'river') {
+                console.log('리버 라운드 완료 - 바로 쇼다운으로 진행');
+                await this.determineWinner();
+                return;
+            }
+            
             // 다음 라운드로 진행
+            console.log('베팅 라운드 완료 - nextRound 호출');
             await this.nextRound();
+        } else {
+            console.log('베팅 라운드 미완료:', { allBetsEqual, allActed });
         }
     }
 
