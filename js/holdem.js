@@ -24,6 +24,7 @@ class HoldemGame {
         this.locked = false;
         this.countdownStart = null;
         this.status = 'waiting';
+        this.initialChips = {}; // 각 플레이어의 게임 시작 시 칩 수 저장
         
         this.init();
     }
@@ -64,13 +65,7 @@ class HoldemGame {
         document.getElementById('confirmRaiseBtn')?.addEventListener('click', () => this.raise());
         document.getElementById('closeHoldemResultBtn')?.addEventListener('click', () => this.closeHoldemResult());
         
-        // 칩 선택
-        document.querySelectorAll('.holdem-chip').forEach(chip => {
-            chip.addEventListener('click', () => {
-                const value = parseInt(chip.dataset.value);
-                this.selectChip(value);
-            });
-        });
+        // 칩 선택 버튼 제거됨 (홀덤에서는 사용하지 않음)
     }
 
     async joinTable() {
@@ -784,27 +779,33 @@ class HoldemGame {
             const smallBlindPosition = (dealerPosition + 1) % activePlayers.length;
             const bigBlindPosition = (dealerPosition + 2) % activePlayers.length;
             
-            // 블라인드 설정
+            // 게임 시작 시 각 플레이어의 초기 칩 수 저장
             activePlayers.forEach((player, index) => {
+                // 초기 칩 수 저장 (게임 시작 시)
+                if (!this.initialChips[player.uid]) {
+                    this.initialChips[player.uid] = player.chips;
+                }
+                
                 player.isDealer = index === dealerPosition;
                 player.isSmallBlind = index === smallBlindPosition;
                 player.isBigBlind = index === bigBlindPosition;
                 player.hasActed = false;
-                player.totalContribution = player.totalContribution || 0;
+                player.totalContribution = 0; // 게임 시작 시 초기화
                 
                 // 블라인드 베팅
                 if (player.isSmallBlind) {
                     const blindAmount = Math.min(this.smallBlind, player.chips);
                     player.chips -= blindAmount;
                     player.bet = blindAmount;
-                    player.totalContribution += blindAmount;
+                    player.totalContribution = blindAmount;
                 } else if (player.isBigBlind) {
                     const blindAmount = Math.min(this.bigBlind, player.chips);
                     player.chips -= blindAmount;
                     player.bet = blindAmount;
-                    player.totalContribution += blindAmount;
+                    player.totalContribution = blindAmount;
                 } else {
                     player.bet = 0;
+                    player.totalContribution = 0;
                 }
                 
                 player.status = 'active';
@@ -1320,17 +1321,33 @@ class HoldemGame {
             const winner = players.find(p => p.status !== 'folded');
             if (winner) {
                 const totalPot = data.pot || 0;
+                const myUid = window.authManager?.currentUser?.uid;
+                
                 const updatedPlayers = players.map(p => {
                     if (p.uid === winner.uid) {
                         return { ...p, chips: p.chips + totalPot };
                     }
                     return p;
                 });
+                
                 await this.gameRef.update({
                     currentRound: 'showdown',
                     players: updatedPlayers,
                     pot: 0
                 });
+                
+                // 내 포인트 업데이트
+                if (window.game && myUid) {
+                    const myPlayer = updatedPlayers.find(p => p.uid === myUid);
+                    if (myPlayer) {
+                        const initialChips = this.initialChips[myUid] || myPlayer.chips;
+                        window.game.money = myPlayer.chips;
+                        window.game.updateDisplay();
+                        // 초기 칩 수 업데이트
+                        this.initialChips[myUid] = myPlayer.chips;
+                    }
+                }
+                
                 console.log('폴드로 인한 승자:', winner.nickname);
                 this.showHoldemResultModal(winner, null, totalPot, players);
             }
@@ -1369,12 +1386,25 @@ class HoldemGame {
         // 팟 분배 (사이드팟 미구현: 총 팟을 동등 분배)
         const totalPot = data.pot || 0;
         const share = Math.floor(totalPot / winners.length);
+        const myUid = window.authManager?.currentUser?.uid;
+        let myProfit = 0; // 내가 얻거나 잃은 포인트
+        
         const updatedPlayers = players.map(p => {
             const winner = winners.find(w => w.player.uid === p.uid);
             if (winner) {
+                const profit = share - (p.totalContribution || 0);
+                if (p.uid === myUid) {
+                    myProfit = profit;
+                }
                 return { ...p, chips: p.chips + share };
+            } else {
+                // 패배한 플레이어는 베팅한 금액만큼 잃음
+                const loss = -(p.totalContribution || 0);
+                if (p.uid === myUid) {
+                    myProfit = loss;
+                }
+                return p;
             }
-            return p;
         });
 
         await this.gameRef.update({
@@ -1382,6 +1412,31 @@ class HoldemGame {
             players: updatedPlayers,
             pot: 0
         });
+
+        // 내 포인트 업데이트
+        if (window.game && myUid) {
+            const myPlayer = updatedPlayers.find(p => p.uid === myUid);
+            if (myPlayer) {
+                // 게임 시작 시 저장된 초기 칩 수 사용
+                const initialChips = this.initialChips[myUid] || myPlayer.chips;
+                const currentChips = myPlayer.chips;
+                const actualProfit = currentChips - initialChips;
+                
+                // 학습 포인트 업데이트
+                window.game.money = currentChips;
+                window.game.updateDisplay();
+                
+                // 초기 칩 수 업데이트 (다음 게임을 위해)
+                this.initialChips[myUid] = currentChips;
+                
+                console.log('포인트 업데이트:', {
+                    initialChips,
+                    currentChips,
+                    actualProfit,
+                    myProfit
+                });
+            }
+        }
 
         // 결과 모달 표시
         console.log('결과 모달 표시:', winners[0].player.nickname, evaluated);
