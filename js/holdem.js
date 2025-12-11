@@ -25,6 +25,7 @@ class HoldemGame {
         this.countdownStart = null;
         this.status = 'waiting';
         this.initialChips = {}; // 각 플레이어의 게임 시작 시 칩 수 저장
+        this.lastShownResultTimestamp = null; // 마지막으로 표시한 결과 타임스탬프
         
         this.init();
     }
@@ -69,7 +70,10 @@ class HoldemGame {
     }
 
     async joinTable() {
+        console.log('joinTable 호출됨');
+        
         if (!window.authManager || !window.authManager.currentUser) {
+            console.error('로그인되지 않음');
             alert('로그인이 필요합니다.');
             return;
         }
@@ -77,6 +81,7 @@ class HoldemGame {
         try {
             const user = window.authManager.currentUser;
             const userData = window.authManager.userData;
+            console.log('사용자 정보:', { uid: user.uid, nickname: userData?.nickname });
             
             // 기존 게임 찾기 또는 새 게임 생성
             const gamesRef = db.collection('holdemGames');
@@ -428,7 +433,11 @@ class HoldemGame {
             // 중복 표시 방지: 최근 5초 이내의 결과만 표시
             const now = Date.now();
             if (now - result.timestamp < 5000) {
-                this.showHoldemResultModal(result.winner, result.evaluated, result.pot, this.players);
+                // 이미 표시된 결과인지 확인 (중복 방지)
+                if (!this.lastShownResultTimestamp || this.lastShownResultTimestamp !== result.timestamp) {
+                    this.lastShownResultTimestamp = result.timestamp;
+                    this.showHoldemResultModal(result.winner, result.evaluated, result.pot, this.players);
+                }
             }
         }
 
