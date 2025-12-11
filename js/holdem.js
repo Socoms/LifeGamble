@@ -1256,21 +1256,36 @@ class HoldemGame {
 
     async determineWinner() {
         // 간단한 핸드 평가로 승자를 결정하고 팟 분배
-        if (!this.gameRef) return;
+        if (!this.gameRef) {
+            console.log('determineWinner: gameRef가 없습니다');
+            return;
+        }
 
         const gameData = await this.gameRef.get();
-        if (!gameData.exists) return;
+        if (!gameData.exists) {
+            console.log('determineWinner: gameData가 존재하지 않습니다');
+            return;
+        }
 
-        const players = gameData.data().players || [];
-        const community = this.communityCards || [];
+        const data = gameData.data();
+        const players = data.players || [];
+        const community = data.communityCards || [];
+        
+        console.log('determineWinner 호출:', {
+            playersCount: players.length,
+            communityCards: community.length,
+            community: community
+        });
 
         // 쇼다운 대상 (폴드 제외, 카드 2장 보유)
         const contenders = players.filter(p => p.status !== 'folded' && (p.cards || []).length === 2);
+        console.log('쇼다운 대상:', contenders.length, contenders.map(c => ({ name: c.nickname, cards: c.cards })));
+        
         if (contenders.length === 0) {
             // 폴드로 인한 승자
             const winner = players.find(p => p.status !== 'folded');
             if (winner) {
-                const totalPot = gameData.data().pot || 0;
+                const totalPot = data.pot || 0;
                 const updatedPlayers = players.map(p => {
                     if (p.uid === winner.uid) {
                         return { ...p, chips: p.chips + totalPot };
@@ -1282,6 +1297,7 @@ class HoldemGame {
                     players: updatedPlayers,
                     pot: 0
                 });
+                console.log('폴드로 인한 승자:', winner.nickname);
                 this.showHoldemResultModal(winner, null, totalPot, players);
             }
             return;
@@ -1291,6 +1307,13 @@ class HoldemGame {
         const evaluated = contenders.map(p => {
             const full = [...(p.cards || []), ...community];
             const evalResult = this.evaluateBestHand(full);
+            console.log(`${p.nickname} 핸드 평가:`, {
+                cards: p.cards,
+                community: community,
+                full: full,
+                hand: evalResult.name,
+                rank: evalResult.rank
+            });
             return { player: p, rank: evalResult.rank, name: evalResult.name, cards: p.cards };
         });
 
@@ -1304,8 +1327,13 @@ class HoldemGame {
         const bestRank = evaluated[0].rank;
         const winners = evaluated.filter(e => this.sameRank(e.rank, bestRank));
 
+        console.log('승자 결정:', {
+            evaluated: evaluated.map(e => ({ name: e.player.nickname, hand: e.name })),
+            winners: winners.map(w => w.player.nickname)
+        });
+
         // 팟 분배 (사이드팟 미구현: 총 팟을 동등 분배)
-        const totalPot = gameData.data().pot || 0;
+        const totalPot = data.pot || 0;
         const share = Math.floor(totalPot / winners.length);
         const updatedPlayers = players.map(p => {
             const winner = winners.find(w => w.player.uid === p.uid);
@@ -1322,6 +1350,7 @@ class HoldemGame {
         });
 
         // 결과 모달 표시
+        console.log('결과 모달 표시:', winners[0].player.nickname, evaluated);
         this.showHoldemResultModal(winners[0].player, evaluated, totalPot, players);
 
         // 5초 후 새 게임 시작
