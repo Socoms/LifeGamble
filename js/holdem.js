@@ -1204,15 +1204,27 @@ class HoldemGame {
         const roundOrder = ['preflop', 'flop', 'turn', 'river', 'showdown'];
         const currentIndex = roundOrder.indexOf(this.currentRound);
         
+        console.log('nextRound 호출:', { currentRound: this.currentRound, currentIndex });
+        
         if (currentIndex === -1 || currentIndex >= roundOrder.length - 1) {
+            console.log('쇼다운으로 진행 - determineWinner 호출');
             await this.determineWinner();
             return;
         }
 
         const nextRound = roundOrder[currentIndex + 1];
+        console.log('다음 라운드:', nextRound);
+        
+        // 리버 이후에는 바로 쇼다운
+        if (nextRound === 'showdown') {
+            console.log('리버 완료 - 쇼다운으로 진행');
+            await this.determineWinner();
+            return;
+        }
         
         // 커뮤니티 카드 추가
-        let newCommunityCards = [...this.communityCards];
+        const gameData = await this.gameRef.get();
+        let newCommunityCards = gameData.exists ? (gameData.data().communityCards || []) : [];
         if (nextRound === 'flop') {
             // 플롭: 3장 추가
             newCommunityCards = await this.dealCommunityCards(3);
@@ -1223,8 +1235,7 @@ class HoldemGame {
         }
 
         // 베팅 초기화
-        const gameData = await this.gameRef.get();
-        const players = gameData.data().players || [];
+        const players = gameData.exists ? (gameData.data().players || []) : [];
         players.forEach(p => {
             if (p.status === 'active') {
                 p.bet = 0;
