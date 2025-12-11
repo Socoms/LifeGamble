@@ -269,6 +269,42 @@ class HoldemGame {
 
         this.resetGame();
         
+        // 모든 플레이어 슬롯의 카드 초기화
+        for (let i = 0; i < 6; i++) {
+            const slot = document.getElementById(`playerSlot${i}`);
+            if (slot) {
+                const cardsContainer = slot.querySelector('.player-cards');
+                if (cardsContainer) {
+                    const cardSlots = cardsContainer.querySelectorAll('.card-slot');
+                    cardSlots.forEach(cardSlot => {
+                        cardSlot.classList.add('empty');
+                        cardSlot.innerHTML = '';
+                    });
+                }
+                // 플레이어 정보도 초기화
+                const nameEl = slot.querySelector('.player-name');
+                const chipsEl = slot.querySelector('.player-chips');
+                const betEl = slot.querySelector('.player-bet');
+                const statusEl = slot.querySelector('.player-status');
+                if (nameEl) nameEl.textContent = '-';
+                if (chipsEl) chipsEl.textContent = '-';
+                if (betEl) betEl.textContent = '베팅: 0P';
+                if (statusEl) statusEl.textContent = '-';
+                slot.classList.add('empty');
+                slot.classList.remove('my-turn', 'my-player');
+            }
+        }
+        
+        // 커뮤니티 카드 초기화
+        const communityCards = document.getElementById('communityCards');
+        if (communityCards) {
+            const cardSlots = communityCards.querySelectorAll('.card-slot');
+            cardSlots.forEach(slot => {
+                slot.classList.add('empty');
+                slot.innerHTML = '';
+            });
+        }
+        
         // 화면 즉시 업데이트
         this.updateDisplay();
         
@@ -295,6 +331,9 @@ class HoldemGame {
         // 플레이어 목록 초기화
         const playersList = document.getElementById('holdemPlayersList');
         if (playersList) playersList.innerHTML = '';
+        
+        // 결과 모달 닫기
+        this.closeHoldemResult();
         
         // 버튼 상태 변경
         document.getElementById('joinHoldemTableBtn').style.display = 'block';
@@ -508,11 +547,21 @@ class HoldemGame {
                 const chipsEl = slot.querySelector('.player-chips');
                 const betEl = slot.querySelector('.player-bet');
                 const statusEl = slot.querySelector('.player-status');
+                const cardsContainer = slot.querySelector('.player-cards');
                 
                 if (nameEl) nameEl.textContent = '-';
                 if (chipsEl) chipsEl.textContent = '-';
                 if (betEl) betEl.textContent = '베팅: 0P';
                 if (statusEl) statusEl.textContent = '-';
+                
+                // 카드 슬롯도 완전히 초기화
+                if (cardsContainer) {
+                    const cardSlots = cardsContainer.querySelectorAll('.card-slot');
+                    cardSlots.forEach(cardSlot => {
+                        cardSlot.classList.add('empty');
+                        cardSlot.innerHTML = '';
+                    });
+                }
             }
         }
 
@@ -1282,15 +1331,25 @@ class HoldemGame {
     }
 
     showHoldemResultModal(winner, evaluated, pot, allPlayers) {
+        console.log('showHoldemResultModal 호출:', { winner, evaluated, pot });
         const modal = document.getElementById('holdemResultModal');
         const title = document.getElementById('holdemResultTitle');
         const details = document.getElementById('holdemResultDetails');
         const winnerInfo = document.getElementById('holdemWinnerInfo');
         
-        if (!modal) return;
+        if (!modal) {
+            console.error('holdemResultModal 요소를 찾을 수 없습니다!');
+            alert(`쇼다운 결과: ${winner.nickname} 승리! (팟: ${pot}P)`);
+            return;
+        }
+        
+        if (!title || !details || !winnerInfo) {
+            console.error('결과 모달 요소를 찾을 수 없습니다!');
+            return;
+        }
 
         const myUid = window.authManager?.currentUser?.uid;
-        const isWinner = winner.uid === myUid;
+        const isWinner = winner && winner.uid === myUid;
         
         // 제목 설정
         if (isWinner) {
@@ -1322,7 +1381,8 @@ class HoldemGame {
         details.innerHTML = detailsHTML;
 
         // 승자 정보
-        const share = Math.floor(pot / (evaluated ? evaluated.filter(e => e.player.uid === winner.uid).length : 1));
+        const winnerCount = evaluated ? evaluated.filter(e => e.player.uid === winner.uid).length : 1;
+        const share = Math.floor(pot / winnerCount);
         winnerInfo.innerHTML = `
             <h4 style="color: #ffd700; margin-bottom: 10px;">🏆 승자: ${winner.nickname}</h4>
             <p>획득 팟: <strong style="color: #ffd700; font-size: 1.2em;">${share}P</strong></p>
@@ -1330,7 +1390,9 @@ class HoldemGame {
         `;
 
         // 모달 표시
+        console.log('모달 표시 시도');
         modal.style.display = 'flex';
+        modal.style.zIndex = '10000';
     }
 
     closeHoldemResult() {
