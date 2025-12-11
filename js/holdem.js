@@ -422,6 +422,16 @@ class HoldemGame {
             this.myCards = myPlayer.cards || [];
         }
 
+        // 쇼다운 결과가 있으면 모든 플레이어에게 결과 모달 표시
+        if (gameData.showdownResult && gameData.showdownResult.timestamp) {
+            const result = gameData.showdownResult;
+            // 중복 표시 방지: 최근 5초 이내의 결과만 표시
+            const now = Date.now();
+            if (now - result.timestamp < 5000) {
+                this.showHoldemResultModal(result.winner, result.evaluated, result.pot, this.players);
+            }
+        }
+
         this.updateDisplay();
 
         // 카운트다운 처리 및 자동 시작
@@ -1336,17 +1346,36 @@ class HoldemGame {
                     pot: 0
                 });
                 
-                // 내 포인트 업데이트
+                // 내 포인트 업데이트 및 Firestore 저장
                 if (window.game && myUid) {
                     const myPlayer = updatedPlayers.find(p => p.uid === myUid);
                     if (myPlayer) {
                         const initialChips = this.initialChips[myUid] || myPlayer.chips;
                         window.game.money = myPlayer.chips;
                         window.game.updateDisplay();
+                        
+                        // Firestore에 포인트 저장
+                        if (window.authManager && window.authManager.currentUser) {
+                            await window.authManager.saveUserData({
+                                currentPoints: myPlayer.chips,
+                                gameStats: window.game.userGameData?.gameStats || {}
+                            });
+                        }
+                        
                         // 초기 칩 수 업데이트
                         this.initialChips[myUid] = myPlayer.chips;
                     }
                 }
+                
+                // 결과 모달 표시를 위한 Firestore 업데이트
+                await this.gameRef.update({
+                    showdownResult: {
+                        winner: winner,
+                        evaluated: null,
+                        pot: totalPot,
+                        timestamp: Date.now()
+                    }
+                });
                 
                 console.log('폴드로 인한 승자:', winner.nickname);
                 this.showHoldemResultModal(winner, null, totalPot, players);
@@ -1413,23 +1442,31 @@ class HoldemGame {
             pot: 0
         });
 
-        // 내 포인트 업데이트
-        if (window.game && myUid) {
-            const myPlayer = updatedPlayers.find(p => p.uid === myUid);
-            if (myPlayer) {
-                // 게임 시작 시 저장된 초기 칩 수 사용
-                const initialChips = this.initialChips[myUid] || myPlayer.chips;
-                const currentChips = myPlayer.chips;
+        // 모든 플레이어의 포인트 업데이트 및 Firestore 저장
+        const myUid = window.authManager?.currentUser?.uid;
+        for (const player of updatedPlayers) {
+            if (player.uid === myUid && window.game) {
+                // 내 포인트만 로컬 업데이트
+                const initialChips = this.initialChips[player.uid] || player.chips;
+                const currentChips = player.chips;
                 const actualProfit = currentChips - initialChips;
                 
                 // 학습 포인트 업데이트
                 window.game.money = currentChips;
                 window.game.updateDisplay();
                 
-                // 초기 칩 수 업데이트 (다음 게임을 위해)
-                this.initialChips[myUid] = currentChips;
+                // Firestore에 포인트 저장
+                if (window.authManager && window.authManager.currentUser) {
+                    await window.authManager.saveUserData({
+                        currentPoints: currentChips,
+                        gameStats: window.game.userGameData?.gameStats || {}
+                    });
+                }
                 
-                console.log('포인트 업데이트:', {
+                // 초기 칩 수 업데이트 (다음 게임을 위해)
+                this.initialChips[player.uid] = currentChips;
+                
+                console.log('포인트 업데이트 및 저장:', {
                     initialChips,
                     currentChips,
                     actualProfit,
@@ -1438,8 +1475,18 @@ class HoldemGame {
             }
         }
 
-        // 결과 모달 표시
-        console.log('결과 모달 표시:', winners[0].player.nickname, evaluated);
+        // 결과 모달 표시 (모든 플레이어에게 표시되도록 Firestore 업데이트로 트리거)
+        // showdownResult 필드를 추가하여 모든 클라이언트가 결과를 표시하도록 함
+        await this.gameRef.update({
+            showdownResult: {
+                winner: winners[0].player,
+                evaluated: evaluated,
+                pot: totalPot,
+                timestamp: Date.now()
+            }
+        });
+        
+        // 내 결과 모달도 즉시 표시
         this.showHoldemResultModal(winners[0].player, evaluated, totalPot, players);
 
         // 5초 후 새 게임 시작
