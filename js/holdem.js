@@ -50,13 +50,35 @@ class HoldemGame {
             });
         });
 
-        // 홀덤 게임 버튼들
-        document.getElementById('showHoldemRulesBtn')?.addEventListener('click', () => this.showRules());
-        document.getElementById('closeHoldemRules')?.addEventListener('click', () => this.hideRules());
-        document.getElementById('joinHoldemTableBtn')?.addEventListener('click', () => this.joinTable());
-        document.getElementById('leaveHoldemTableBtn')?.addEventListener('click', () => this.leaveTable());
-        document.getElementById('startHoldemGameBtn')?.addEventListener('click', () => this.startGame());
-        document.getElementById('backToMenuBtnHoldem')?.addEventListener('click', () => this.backToMenu());
+        // 홀덤 게임 버튼들 - 이벤트 위임 사용
+        document.addEventListener('click', (e) => {
+            if (e.target.id === 'showHoldemRulesBtn' || e.target.closest('#showHoldemRulesBtn')) {
+                this.showRules();
+            } else if (e.target.id === 'closeHoldemRules' || e.target.closest('#closeHoldemRules')) {
+                this.hideRules();
+            } else if (e.target.id === 'joinHoldemTableBtn' || e.target.closest('#joinHoldemTableBtn')) {
+                console.log('joinHoldemTableBtn 클릭 감지');
+                this.joinTable();
+            } else if (e.target.id === 'leaveHoldemTableBtn' || e.target.closest('#leaveHoldemTableBtn')) {
+                this.leaveTable();
+            } else if (e.target.id === 'startHoldemGameBtn' || e.target.closest('#startHoldemGameBtn')) {
+                this.startGame();
+            } else if (e.target.id === 'backToMenuBtnHoldem' || e.target.closest('#backToMenuBtnHoldem')) {
+                this.backToMenu();
+            }
+        });
+        
+        // 기존 방식도 유지 (버튼이 있을 때)
+        const joinBtn = document.getElementById('joinHoldemTableBtn');
+        if (joinBtn) {
+            console.log('joinHoldemTableBtn 요소 찾음, 이벤트 리스너 추가');
+            joinBtn.addEventListener('click', () => {
+                console.log('joinHoldemTableBtn 클릭 이벤트 발생');
+                this.joinTable();
+            });
+        } else {
+            console.warn('joinHoldemTableBtn 요소를 찾을 수 없습니다');
+        }
         
         // 액션 버튼들
         document.getElementById('holdemFoldBtn')?.addEventListener('click', () => this.fold());
