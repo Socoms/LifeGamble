@@ -62,6 +62,7 @@ class HoldemGame {
         document.getElementById('holdemRaiseBtn')?.addEventListener('click', () => this.showRaiseInput());
         document.getElementById('holdemCheckBtn')?.addEventListener('click', () => this.check());
         document.getElementById('confirmRaiseBtn')?.addEventListener('click', () => this.raise());
+        document.getElementById('closeHoldemResultBtn')?.addEventListener('click', () => this.closeHoldemResult());
         
         // 칩 선택
         document.querySelectorAll('.holdem-chip').forEach(chip => {
@@ -1216,13 +1217,32 @@ class HoldemGame {
 
         // 쇼다운 대상 (폴드 제외, 카드 2장 보유)
         const contenders = players.filter(p => p.status !== 'folded' && (p.cards || []).length === 2);
-        if (contenders.length === 0) return;
+        if (contenders.length === 0) {
+            // 폴드로 인한 승자
+            const winner = players.find(p => p.status !== 'folded');
+            if (winner) {
+                const totalPot = gameData.data().pot || 0;
+                const updatedPlayers = players.map(p => {
+                    if (p.uid === winner.uid) {
+                        return { ...p, chips: p.chips + totalPot };
+                    }
+                    return p;
+                });
+                await this.gameRef.update({
+                    currentRound: 'showdown',
+                    players: updatedPlayers,
+                    pot: 0
+                });
+                this.showHoldemResultModal(winner, null, totalPot, players);
+            }
+            return;
+        }
 
         // 핸드 평가
         const evaluated = contenders.map(p => {
             const full = [...(p.cards || []), ...community];
             const evalResult = this.evaluateBestHand(full);
-            return { player: p, rank: evalResult.rank, name: evalResult.name };
+            return { player: p, rank: evalResult.rank, name: evalResult.name, cards: p.cards };
         });
 
         // 최고 핸드 찾기
@@ -1252,14 +1272,72 @@ class HoldemGame {
             pot: 0
         });
 
-        // 결과 표시
-        const winnerNames = winners.map(w => w.player.nickname || '플레이어').join(', ');
-        this.showHoldemResult(`쇼다운 결과: ${winnerNames} (핸드: ${evaluated[0].name})`);
+        // 결과 모달 표시
+        this.showHoldemResultModal(winners[0].player, evaluated, totalPot, players);
 
-        // 잠시 후 새 게임 시작
+        // 5초 후 새 게임 시작
         setTimeout(() => {
             this.startNewHand();
-        }, 3000);
+        }, 5000);
+    }
+
+    showHoldemResultModal(winner, evaluated, pot, allPlayers) {
+        const modal = document.getElementById('holdemResultModal');
+        const title = document.getElementById('holdemResultTitle');
+        const details = document.getElementById('holdemResultDetails');
+        const winnerInfo = document.getElementById('holdemWinnerInfo');
+        
+        if (!modal) return;
+
+        const myUid = window.authManager?.currentUser?.uid;
+        const isWinner = winner.uid === myUid;
+        
+        // 제목 설정
+        if (isWinner) {
+            title.textContent = '🎉 승리!';
+            title.style.color = '#ffd700';
+        } else {
+            title.textContent = '게임 종료';
+            title.style.color = '#fff';
+        }
+
+        // 상세 정보
+        let detailsHTML = '';
+        if (evaluated && evaluated.length > 0) {
+            detailsHTML = '<h4 style="color: #ffd93d; margin-bottom: 15px;">핸드 결과</h4>';
+            evaluated.forEach((eval, idx) => {
+                const isMyHand = eval.player.uid === myUid;
+                const isWin = eval.player.uid === winner.uid;
+                const status = isWin ? '🏆 승리' : (isMyHand ? '패배' : '');
+                detailsHTML += `
+                    <div style="padding: 10px; margin: 5px 0; background: ${isMyHand ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.2)'}; border-radius: 5px;">
+                        <strong>${eval.player.nickname}</strong> ${status ? `- ${status}` : ''}<br>
+                        핸드: <strong style="color: #ffd93d;">${eval.name}</strong>
+                    </div>
+                `;
+            });
+        } else {
+            detailsHTML = `<p>${winner.nickname}님이 폴드로 인해 승리했습니다.</p>`;
+        }
+        details.innerHTML = detailsHTML;
+
+        // 승자 정보
+        const share = Math.floor(pot / (evaluated ? evaluated.filter(e => e.player.uid === winner.uid).length : 1));
+        winnerInfo.innerHTML = `
+            <h4 style="color: #ffd700; margin-bottom: 10px;">🏆 승자: ${winner.nickname}</h4>
+            <p>획득 팟: <strong style="color: #ffd700; font-size: 1.2em;">${share}P</strong></p>
+            ${evaluated ? `<p>핸드: <strong>${evaluated.find(e => e.player.uid === winner.uid)?.name || ''}</strong></p>` : ''}
+        `;
+
+        // 모달 표시
+        modal.style.display = 'flex';
+    }
+
+    closeHoldemResult() {
+        const modal = document.getElementById('holdemResultModal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
     }
 
     async startNewHand() {
@@ -1267,7 +1345,12 @@ class HoldemGame {
         if (!this.gameRef) return;
 
         const gameData = await this.gameRef.get();
+        if (!gameData.exists) return;
+        
         const players = gameData.data().players || [];
+        
+        // 결과 모달 닫기
+        this.closeHoldemResult();
         this.clearHoldemResult();
         
         // 플레이어 초기화
@@ -1289,7 +1372,8 @@ class HoldemGame {
             currentBet: 0,
             currentRound: 'preflop',
             dealerPosition: newDealerPosition,
-            currentPlayerIndex: (newDealerPosition + 1) % players.length
+            currentPlayerIndex: (newDealerPosition + 1) % players.length,
+            status: 'playing'
         });
 
         // 카드 딜링
