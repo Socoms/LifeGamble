@@ -1501,7 +1501,7 @@ class HoldemGame {
         });
 
         // 모든 플레이어의 포인트 업데이트 및 Firestore 저장
-        const myUid = window.authManager?.currentUser?.uid;
+        // myUid는 이미 위에서 선언됨 (1476번 줄)
         for (const player of updatedPlayers) {
             if (player.uid === myUid && window.game) {
                 // 내 포인트만 로컬 업데이트
